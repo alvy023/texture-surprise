@@ -102,7 +102,7 @@ end
 --- @param: None
 --- @return: None
 function TextureSurprise:ShowTextureManager()
-    -- TODO: Show the Texture Manager
+    -- TODO: Show/create the texture manager
 end
 
 --- Description: Show the options menu
@@ -160,9 +160,9 @@ function TextureSurprise:ToggleMinimapButton()
     local hide = not self.db.profile.minimap.hide
     self.db.profile.minimap.hide = hide
     if hide then
-        LDBIcon:Hide("TextureSurprise")
+        LDBIcon:Hide("Texture Surprise")
     else
-        LDBIcon:Show("TextureSurprise")
+        LDBIcon:Show("Texture Surprise")
     end
 end
 
