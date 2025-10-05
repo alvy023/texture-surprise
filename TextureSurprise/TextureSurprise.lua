@@ -14,6 +14,7 @@ local LDBIcon = LibStub("LibDBIcon-1.0")
 
 -- Initialize TS as AceAddon module
 TextureSurprise = AceAddon:NewAddon("TextureSurprise", "AceConsole-3.0", "AceEvent-3.0")
+local textureManager = nil
 
 -- Initialize minimap button
 local dataBroker = LDB:NewDataObject("TextureSurprise", {
@@ -69,14 +70,20 @@ end
 --- @param: None
 --- @return: None
 function TextureSurprise:PLAYER_LOGIN()
-    -- TextureManager:LoadSavedTextures()
+    if textureManager == nil then
+        TextureSurprise:CreateTextureManager()
+        textureManager:Hide()
+    end
 end
 
 --- Description: Player reload event handler
 --- @param: None
 --- @return: None
 function TextureSurprise:PLAYER_ENTERING_WORLD()
-    -- TextureManager:LoadSavedTextures()
+    if textureManager == nil then
+        TextureSurprise:CreateTextureManager()
+        textureManager:Hide()
+    end
 end
 
 -- Functions
@@ -98,11 +105,97 @@ function TextureSurprise:DisableAddonCompartment()
     end
 end
 
---- Description: Show the texture manager UI
+-- Description: Create the texture manager
+--- @param: None
+--- @return: None
+function TextureSurprise:CreateTextureManager()
+    if textureManager == nil then
+        local window = AceGUI:Create("Window-TS")
+        window:SetTitle("Texture Manager")
+        window:SetTitleFont("Fonts\\FRIZQT__.TTF", 14, "")
+        window.titleLabel:SetTextColor(1, 1, 1) -- RGB
+
+        -- Create edit area
+        local editBar = AceGUI:Create("SimpleGroup")
+        editBar:SetLayout("Flow")
+        editBar:SetFullWidth(true)
+
+        local spacer = AceGUI:Create("Label")
+        spacer:SetWidth(50)
+        spacer:SetHeight(80)
+
+        local editBox = AceGUI:Create("EditBox")
+        editBox:SetLabel(" Texture Name")
+        editBox:SetWidth(278)
+        editBox.editbox:SetScript("OnTextChanged", EditBox_OnTextChanged)
+        editBox.label:SetTextColor(1, 1, 1) -- RGB
+
+        editBar:AddChild(spacer)
+        editBar:AddChild(editBox)
+        window:AddChild(editBar)
+
+        -- Create Button Bar
+        local buttonBar = AceGUI:Create("SimpleGroup")
+        buttonBar:SetLayout("Flow")
+        buttonBar:SetFullWidth(true)
+
+        local spacer1 = AceGUI:Create("Label")
+        spacer1:SetWidth(50)
+        local spacer2 = AceGUI:Create("Label")
+        spacer2:SetWidth(10)
+        local spacer3 = AceGUI:Create("Label")
+        spacer3:SetWidth(10)
+
+        local addButton = AceGUI:Create("Button")
+        addButton:SetText("Add")
+        addButton:SetWidth(80)
+        addButton:SetCallback("OnClick", function()
+            local text = editBox:GetText()
+            -- Add logic here to add texture
+            self:Print("Add: " .. (text or ""))
+        end)
+        addButton.text:SetTextColor(1, 1, 1) -- RGB
+
+        local removeButton = AceGUI:Create("Button")
+        removeButton:SetText("Remove")
+        removeButton:SetWidth(80)
+        removeButton:SetCallback("OnClick", function()
+            local text = editBox:GetText()
+            -- Add logic here to remove texture
+            self:Print("Remove: " .. (text or ""))
+        end)
+        removeButton.text:SetTextColor(1, 1, 1) -- RGB
+
+        local editModeButton = AceGUI:Create("Button")
+        editModeButton:SetText("Edit Mode")
+        editModeButton:SetWidth(100)
+        editModeButton:SetCallback("OnClick", function()
+            -- Add logic here to toggle edit mode
+            self:Print("Edit Mode toggled")
+        end)
+        editModeButton.text:SetTextColor(1, 1, 1) -- RGB
+
+        buttonBar:AddChild(spacer1)
+        buttonBar:AddChild(addButton)
+        buttonBar:AddChild(spacer2)
+        buttonBar:AddChild(removeButton)
+        buttonBar:AddChild(spacer3)
+        buttonBar:AddChild(editModeButton)
+        window:AddChild(buttonBar)
+
+        textureManager = window
+    end
+end
+
+--- Description: Show the texture manager
 --- @param: None
 --- @return: None
 function TextureSurprise:ShowTextureManager()
-    -- TODO: Show/create the texture manager
+    if textureManager == nil then
+        self:Print("[ERROR] Unable to open texture manager!")
+        return
+    end
+    textureManager:Show()
 end
 
 --- Description: Show the options menu
