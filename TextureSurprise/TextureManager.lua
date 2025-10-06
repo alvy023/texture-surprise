@@ -10,6 +10,7 @@ local AceGUI = LibStub("AceGUI-3.0")
 
 -- TextureManager Module
 local TextureManager = {}
+local SYSTEM_ID_TEXTURESURPRISE = 37001 -- Unique system ID for Edit Mode
 
 -- Functions
 --- Description: Creates the texture manager window
@@ -168,12 +169,135 @@ function TextureManager:ShowTexture(name, parentAddon)
     end
     local textureData = parentAddon.db.profile.textures[name]
     if not textureData.visible then
-        local frame = CreateFrame("Frame", nil, UIParent)
+        -- Create the frame for the texture
+        local frame = CreateFrame("Frame", "TextureSurpriseFrame_"..name, UIParent, "EditModeSystemTemplate")
+        frame.parentAddon = parentAddon
+        frame.isSelected = false
         frame:SetSize(textureData.width, textureData.height)
         frame:SetPoint("CENTER", UIParent, "CENTER", textureData.x, textureData.y)
+        -- Add edit mode overlay
+        frame.EditModeHighlight = frame:CreateTexture(nil, "OVERLAY")
+        frame.EditModeHighlight:SetAllPoints(frame)
+        frame.EditModeHighlight:Hide()
+
+        -- Add the texture
         local texture = frame:CreateTexture(nil, "ARTWORK")
         texture:SetAllPoints(frame)
         texture:SetTexture(textureData.path)
+
+        -- Register with Edit Mode
+        if EditModeManagerFrame and EditModeManagerFrame.RegisterSystemFrame then
+            EditModeManagerFrame:RegisterSystemFrame(frame, SYSTEM_ID_TEXTURESURPRISE)
+        end
+
+        -- Check frame selection for Edit Mode highlight
+        frame:SetScript("OnMouseDown", function(self, button)
+            if EditModeManagerFrame and EditModeManagerFrame.editModeActive then
+                if button == "LeftButton" then
+                    self.isSelected = true
+                    self.EditModeHighlight:SetColorTexture(1, 0.82, 0, 0.5) -- yellow
+                elseif button == "RightButton" then
+                    -- Show AceGUI menu for editing width, height, alpha
+                    local menu = AceGUI:Create("Frame")
+                    menu:SetTitle("Edit Texture: " .. name)
+                    menu:SetWidth(300)
+                    menu:SetHeight(200)
+                    menu:SetLayout("Flow")
+
+                    local widthBox = AceGUI:Create("EditBox")
+                    widthBox:SetLabel("Width")
+                    widthBox:SetText(tostring(textureData.width))
+                    widthBox:SetWidth(120)
+                    widthBox:SetCallback("OnEnterPressed", function(_, _, val)
+                        local num = tonumber(val)
+                        if num and num > 0 then
+                            textureData.width = num
+                            self:SetWidth(num)
+                        end
+                    end)
+                    menu:AddChild(widthBox)
+
+                    local heightBox = AceGUI:Create("EditBox")
+                    heightBox:SetLabel("Height")
+                    heightBox:SetText(tostring(textureData.height))
+                    heightBox:SetWidth(120)
+                    heightBox:SetCallback("OnEnterPressed", function(_, _, val)
+                        local num = tonumber(val)
+                        if num and num > 0 then
+                            textureData.height = num
+                            self:SetHeight(num)
+                        end
+                    end)
+                    menu:AddChild(heightBox)
+
+                    local alphaSlider = AceGUI:Create("Slider")
+                    alphaSlider:SetLabel("Alpha")
+                    alphaSlider:SetSliderValues(0, 1, 0.01)
+                    alphaSlider:SetValue(textureData.alpha or 1)
+                    alphaSlider:SetWidth(200)
+                    alphaSlider:SetCallback("OnValueChanged", function(_, _, val)
+                        textureData.alpha = val
+                        self:SetAlpha(val)
+                    end)
+                    menu:AddChild(alphaSlider)
+
+                    local removeBtn = AceGUI:Create("Button")
+                    removeBtn:SetText("Remove")
+                    removeBtn:SetWidth(80)
+                    removeBtn:SetCallback("OnClick", function()
+                        TextureManager:RemoveTexture(name, parentAddon)
+                        self:Release()
+                        menu:Release()
+                    end)
+                    menu:AddChild(removeBtn)
+
+                    local closeBtn = AceGUI:Create("Button")
+                    closeBtn:SetText("Close")
+                    closeBtn:SetWidth(80)
+                    closeBtn:SetCallback("OnClick", function()
+                        menu:Release()
+                    end)
+                    menu:AddChild(closeBtn)
+                end
+            end
+        end)
+        WorldFrame:HookScript("OnMouseDown", function(_, button)
+            if EditModeManagerFrame and EditModeManagerFrame.editModeActive and button == "LeftButton" then
+                if frame.isSelected then
+                    frame.isSelected = false
+                    frame.EditModeHighlight:SetColorTexture(0, 0.56, 1, 0.3) -- blue
+                end
+            end
+        end)
+
+        -- Implement required Edit Mode methods
+        frame.UpdateSystemSetting = function(self, setting, value)
+            -- Handle system settings if needed
+        end
+        frame.OnEditModeEnter = function(self)
+            self:EnableMouse(true)
+            self:SetMovable(true)
+            self:RegisterForDrag("LeftButton")
+            self:SetScript("OnDragStart", self.StartMoving)
+            self:SetScript("OnDragStop", function(self)
+                self:StopMovingOrSizing()
+                local newX, newY = self:GetCenter()
+                self.parentAddon.db.profile.textures[name].x = newX
+                self.parentAddon.db.profile.textures[name].y = newY
+            end)
+            self.EditModeHighlight:Show()
+            self.EditModeHighlight:SetColorTexture(0, 0.56, 1, 0.3) -- blue
+        end
+        frame.OnEditModeExit = function(self)
+            self:EnableMouse(false)
+            self:SetMovable(false)
+            self:RegisterForDrag(nil)
+            self:SetScript("OnDragStart", nil)
+            self:SetScript("OnDragStop", nil)
+            self.EditModeHighlight:Hide()
+            self.EditModeHighlight:SetColorTexture(0, 0.56, 1, 0.3) -- blue
+        end
+
         frame:Show()
         parentAddon.db.profile.textures[name].visible = true
     end
