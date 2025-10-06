@@ -15,7 +15,7 @@ local LDBIcon = LibStub("LibDBIcon-1.0")
 -- Initialize TS as AceAddon module
 TextureSurprise = AceAddon:NewAddon("TextureSurprise", "AceConsole-3.0", "AceEvent-3.0")
 local TextureManager = require("TextureManager")
-local textureManager = nil
+local textureManagerWindow = nil
 
 -- Initialize minimap button
 local dataBroker = LDB:NewDataObject("TextureSurprise", {
@@ -71,9 +71,15 @@ end
 --- @param: None
 --- @return: None
 function TextureSurprise:PLAYER_LOGIN()
-    if textureManager == nil then
+    if textureManagerWindow == nil then
         TextureSurprise:CreateTextureManager()
-        textureManager:Hide()
+        textureManagerWindow:Hide()
+    end
+    -- Show all saved textures on login
+    if self.db and self.db.profile and self.db.profile.textures then
+        for name, _ in pairs(self.db.profile.textures) do
+            TextureManager:ShowTexture(name, self)
+        end
     end
 end
 
@@ -81,9 +87,15 @@ end
 --- @param: None
 --- @return: None
 function TextureSurprise:PLAYER_ENTERING_WORLD()
-    if textureManager == nil then
+    if textureManagerWindow == nil then
         TextureSurprise:CreateTextureManager()
-        textureManager:Hide()
+        textureManagerWindow:Hide()
+    end
+    -- Show all saved textures on login
+    if self.db and self.db.profile and self.db.profile.textures then
+        for name, _ in pairs(self.db.profile.textures) do
+            TextureManager:ShowTexture(name, self)
+        end
     end
 end
 
@@ -110,8 +122,8 @@ end
 --- @param: None
 --- @return: None
 function TextureSurprise:CreateTextureManager()
-    if textureManager == nil then
-        textureManager = TextureManager:Create(self)
+    if textureManagerWindow == nil then
+        textureManagerWindow = TextureManager:Create(self)
     end
 end
 
@@ -119,11 +131,11 @@ end
 --- @param: None
 --- @return: None
 function TextureSurprise:ShowTextureManager()
-    if textureManager == nil then
+    if textureManagerWindow == nil then
         self:Print("[ERROR] Unable to open texture manager!")
         return
     end
-    textureManager:Show()
+    textureManagerWindow:Show()
 end
 
 --- Description: Show the options menu

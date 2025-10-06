@@ -12,6 +12,8 @@ local AceGUI = LibStub("AceGUI-3.0")
 local TextureManager = {}
 local SYSTEM_ID_TEXTURESURPRISE = 37001 -- Unique system ID for Edit Mode
 
+TextureManager.frames = TextureManager.frames or {}
+
 -- Functions
 --- Description: Creates the texture manager window
 --- @param parentAddon: Reference to the main addon object
@@ -202,6 +204,8 @@ function TextureManager:ShowTexture(name, parentAddon)
                     self.isSelected = true
                     self.EditModeHighlight:SetColorTexture(1, 0.82, 0, 0.5) -- yellow
                 elseif button == "RightButton" then
+                    self.isSelected = true
+                    self.EditModeHighlight:SetColorTexture(1, 0.82, 0, 0.5) -- yellow
                     -- Show AceGUI menu for editing width, height, alpha
                     local menu = AceGUI:Create("Frame")
                     menu:SetTitle("Edit Texture: " .. name)
@@ -289,7 +293,7 @@ function TextureManager:ShowTexture(name, parentAddon)
                     removeBtn:SetText("Remove")
                     removeBtn:SetWidth(80)
                     removeBtn:SetCallback("OnClick", function()
-                        TextureManager:RemoveTexture(name, parentAddon)
+                        TextureManager:RemoveTexture(name, self.parentAddon)
                         self:Release()
                         menu:Release()
                     end)
@@ -345,6 +349,7 @@ function TextureManager:ShowTexture(name, parentAddon)
         frame:Show()
         parentAddon.db.profile.textures[name].visible = true
     end
+    TextureManager.frames[name] = frame
 end
 
 --- Description: Removes a texture from the database
@@ -356,6 +361,11 @@ function TextureManager:RemoveTexture(name, parentAddon)
         return false
     end
     parentAddon.db.profile.textures[name] = nil
+    local frame = TextureManager.frames[name]
+    if frame then
+        frame:Release()
+        TextureManager.frames[name] = nil
+    end
     return true
 end
 
