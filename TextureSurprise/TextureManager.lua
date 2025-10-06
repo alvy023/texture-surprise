@@ -153,6 +153,8 @@ function TextureManager:StoreTexture(name, path, x, y, width, height, parentAddo
         locked = false,
         visible = false,
         alpha = 1.0,
+        strata = "MEDIUM",
+        level = 1,
     }
 end
 
@@ -175,6 +177,9 @@ function TextureManager:ShowTexture(name, parentAddon)
         frame.isSelected = false
         frame:SetSize(textureData.width, textureData.height)
         frame:SetPoint("CENTER", UIParent, "CENTER", textureData.x, textureData.y)
+        frame:SetAlpha(textureData.alpha)
+        frame:SetFrameStrata(textureData.strata)
+        frame:SetFrameLevel(textureData.level)
         -- Add edit mode overlay
         frame.EditModeHighlight = frame:CreateTexture(nil, "OVERLAY")
         frame.EditModeHighlight:SetAllPoints(frame)
@@ -240,6 +245,45 @@ function TextureManager:ShowTexture(name, parentAddon)
                         self:SetAlpha(val)
                     end)
                     menu:AddChild(alphaSlider)
+
+                    local strataBox = AceGUI:Create("Dropdown")
+                    strataBox:SetLabel("Frame Strata")
+                    strataBox:SetList({BACKGROUND="BACKGROUND",LOW="LOW",MEDIUM="MEDIUM",HIGH="HIGH",DIALOG="DIALOG",TOOLTIP="TOOLTIP"})
+                    strataBox:SetValue(textureData.strata or "MEDIUM")
+                    strataBox:SetCallback("OnValueChanged", function(_, _, val)
+                        textureData.strata = val
+                        self:SetFrameStrata(val)
+                    end)
+                    menu:AddChild(strataBox)
+
+                    local levelBox = AceGUI:Create("EditBox")
+                    levelBox:SetLabel("Frame Level")
+                    levelBox:SetText(tostring(textureData.level or self:GetFrameLevel()))
+                    levelBox:SetCallback("OnEnterPressed", function(_, _, val)
+                        local num = tonumber(val)
+                        if num then
+                            textureData.level = num
+                            self:SetFrameLevel(num)
+                        end
+                    end)
+                    menu:AddChild(levelBox)
+
+                    local lockBtn = AceGUI:Create("Button")
+                    lockBtn:SetText(textureData.locked and "Unlock Frame" or "Lock Frame")
+                    lockBtn:SetWidth(100)
+                    lockBtn:SetCallback("OnClick", function()
+                        textureData.locked = not textureData.locked
+                        if textureData.locked then
+                            self:SetMovable(false)
+                            self:EnableMouse(false)
+                            lockBtn:SetText("Unlock Frame")
+                        else
+                            self:SetMovable(true)
+                            self:EnableMouse(true)
+                            lockBtn:SetText("Lock Frame")
+                        end
+                    end)
+                    menu:AddChild(lockBtn)
 
                     local removeBtn = AceGUI:Create("Button")
                     removeBtn:SetText("Remove")
