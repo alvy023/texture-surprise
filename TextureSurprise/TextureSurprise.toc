@@ -20,4 +20,5 @@ libs/Ace3-TS/AceGUI-IconButton-TS.lua
 libs/Ace3-TS/AceGUI-Window-TS.lua
 
 # Core Addon Files
+TextureManager.lua
 TextureSurprise.lua

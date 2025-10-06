@@ -14,6 +14,7 @@ local LDBIcon = LibStub("LibDBIcon-1.0")
 
 -- Initialize TS as AceAddon module
 TextureSurprise = AceAddon:NewAddon("TextureSurprise", "AceConsole-3.0", "AceEvent-3.0")
+local TextureManager = require("TextureManager")
 local textureManager = nil
 
 -- Initialize minimap button

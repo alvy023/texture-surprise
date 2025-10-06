@@ -87,7 +87,22 @@ function TextureManager:Create(parentAddon)
     removeButton:SetWidth(80)
     removeButton:SetCallback("OnClick", function()
         local text = editBox:GetText()
-        parentAddon:Print("Removed texture: " .. (text or ""))
+        if type(text) == "string" and text ~= "" then
+            local removed = TextureManager:RemoveTexture(text, parentAddon)
+            if removed then
+                parentAddon:Print("Removed texture: " .. text)
+                editBox:SetLabel(" Texture File Name (.tga): Successfully removed " .. text)
+                editBox.label:SetTextColor(0, 1, 0) -- RGB bright green
+            else
+                parentAddon:Print("Texture not found: " .. text)
+                editBox:SetLabel(" Texture File Path: Couldn't find texture!")
+                editBox.label:SetTextColor(1, 0, 0) -- RGB bright red
+            end
+        else
+            parentAddon:Print("Please enter a valid texture name to remove.")
+            editBox:SetLabel(" Texture File Path: Texture file required")
+            editBox.label:SetTextColor(1, 0, 0) -- RGB bright red
+        end
     end)
     removeButton.text:SetTextColor(1, 1, 1) -- RGB white
 
@@ -95,7 +110,12 @@ function TextureManager:Create(parentAddon)
     editModeButton:SetText("Edit Mode")
     editModeButton:SetWidth(100)
     editModeButton:SetCallback("OnClick", function()
-        parentAddon:Print("Edit Mode toggled")
+        window.frame:Hide()
+        if EditModeManagerFrame and EditModeManagerFrame.Show then
+            EditModeManagerFrame:Show()
+        else
+            parentAddon:Print("[Error] Edit Mode Manager not available!")
+        end
     end)
     editModeButton.text:SetTextColor(1, 1, 1) -- RGB white
 
@@ -157,6 +177,18 @@ function TextureManager:ShowTexture(name, parentAddon)
         frame:Show()
         parentAddon.db.profile.textures[name].visible = true
     end
+end
+
+--- Description: Removes a texture from the database
+--- @param name: Name of the texture to remove
+--- @param parentAddon: Reference to the main addon object
+--- @return: true if removed, false if not found
+function TextureManager:RemoveTexture(name, parentAddon)
+    if not parentAddon.db.profile.textures or not parentAddon.db.profile.textures[name] then
+        return false
+    end
+    parentAddon.db.profile.textures[name] = nil
+    return true
 end
 
 return TextureManager
