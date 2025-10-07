@@ -14,121 +14,118 @@ TextureManager = {}
 TextureManager.frames = TextureManager.frames or {}
 
 -- Functions
---- Description: Creates the texture manager window
+--- Description: Creates the texture manager window using styled interface
 --- @param parentAddon: Reference to the main addon object
 --- @return: The created window object
 function TextureManager:Create(parentAddon)
-    local window = AceGUI:Create("Window-TS")
-    window:SetTitle("Texture Manager")
-    window:SetTitleFont("Fonts\\FRIZQT__.TTF", 14, "")
-    window.titleLabel:SetTextColor(1, 1, 1) -- RGB
-
-    -- Create edit area
-    local editBar = AceGUI:Create("SimpleGroup")
-    editBar:SetLayout("Flow")
-    editBar:SetFullWidth(true)
-
-    local spacer = AceGUI:Create("Label")
-    spacer:SetWidth(50)
-    spacer:SetHeight(80)
-
-    local editBox = AceGUI:Create("EditBox")
-    editBox:SetLabel(" Texture File Name (.tga):")
-    editBox:SetWidth(278)
-    editBox.label:SetTextColor(1, 1, 1) -- RGB white
-
-    editBar:AddChild(spacer)
-    editBar:AddChild(editBox)
-    window:AddChild(editBar)
-
-    -- Create Button Bar
-    local buttonBar = AceGUI:Create("SimpleGroup")
-    buttonBar:SetLayout("Flow")
-    buttonBar:SetFullWidth(true)
-
-    local spacer1 = AceGUI:Create("Label")
-    spacer1:SetWidth(50)
-    local spacer2 = AceGUI:Create("Label")
-    spacer2:SetWidth(10)
-    local spacer3 = AceGUI:Create("Label")
-    spacer3:SetWidth(10)
-
-    local addButton = AceGUI:Create("Button")
+    -- Use styled interface if available
+    local window = Interface.CreateStyledWindow("Texture Manager", 420, 300, true)
+    
+    -- Create input area
+    local inputFrame = CreateFrame("Frame", nil, window.content)
+    inputFrame:SetPoint("TOPLEFT", window.content, "TOPLEFT", 20, -20)
+    inputFrame:SetPoint("TOPRIGHT", window.content, "TOPRIGHT", -20, -20)
+    inputFrame:SetHeight(80)
+    
+    -- Add category header
+    local inputHeader = Interface.CreateCategoryDivider(inputFrame, false)
+    inputHeader:SetText("Add New Texture")
+    inputHeader:SetPoint("TOPLEFT", inputFrame, "TOPLEFT", 0, 0)
+    
+    -- Create input box
+    local editBox = CreateFrame("EditBox", nil, inputFrame, "InputBoxTemplate")
+    editBox:SetSize(280, 25)
+    editBox:SetPoint("TOPLEFT", inputFrame, "TOPLEFT", 0, -35)
+    editBox:SetAutoFocus(false)
+    
+    local inputLabel = inputFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    inputLabel:SetText("Texture File Name (.tga):")
+    inputLabel:SetTextColor(1, 1, 1)
+    inputLabel:SetPoint("BOTTOMLEFT", editBox, "TOPLEFT", 0, 2)
+    
+    -- Create button area
+    local buttonFrame = CreateFrame("Frame", nil, window.content)
+    buttonFrame:SetPoint("TOPLEFT", inputFrame, "BOTTOMLEFT", 0, -10)
+    buttonFrame:SetPoint("TOPRIGHT", inputFrame, "BOTTOMRIGHT", 0, -10)
+    buttonFrame:SetHeight(40)
+    
+    -- Add buttons
+    local addButton = CreateFrame("Button", nil, buttonFrame, "UIPanelButtonTemplate")
+    addButton:SetSize(80, 25)
+    addButton:SetPoint("LEFT", buttonFrame, "LEFT", 0, 0)
     addButton:SetText("Add")
-    addButton:SetWidth(80)
-    addButton:SetCallback("OnClick", function()
+    
+    local removeButton = CreateFrame("Button", nil, buttonFrame, "UIPanelButtonTemplate")
+    removeButton:SetSize(80, 25)
+    removeButton:SetPoint("LEFT", addButton, "RIGHT", 10, 0)
+    removeButton:SetText("Remove")
+    
+    local editModeButton = CreateFrame("Button", nil, buttonFrame, "UIPanelButtonTemplate")
+    editModeButton:SetSize(100, 25)
+    editModeButton:SetPoint("LEFT", removeButton, "RIGHT", 10, 0)
+    editModeButton:SetText("Edit Mode")
+    
+    -- Button functionality
+    addButton:SetScript("OnClick", function()
         local text = editBox:GetText()
         if type(text) == "string" and text:lower():sub(-4) == ".tga" then
-            -- Test if texture file exists
             local texturePath = "Interface\\AddOns\\TextureSurprise\\textures\\" .. text
             parentAddon:Print("Testing texture path: " .. texturePath)
-            local testTexture = window.frame:CreateTexture(nil, "ARTWORK")
+            
+            -- Test if texture exists
+            local testTexture = window:CreateTexture(nil, "ARTWORK")
             testTexture:SetTexture(texturePath)
             if not testTexture:GetTexture() then
-                editBox:SetLabel(" Texture File Path: Couldn't find file")
-                editBox.label:SetTextColor(1, 0, 0) -- RGB bright red
+                inputLabel:SetText("Error: Couldn't find file!")
+                inputLabel:SetTextColor(1, 0, 0)
             else
-                -- Store and show the texture
                 TextureManager:StoreTexture(text, texturePath, 0, 0, 64, 64, parentAddon)
                 TextureManager:ShowTexture(text, parentAddon)
                 parentAddon:Print("Added texture: " .. texturePath)
-                editBox:SetLabel(" Texture File Name (.tga):")
-                editBox.label:SetTextColor(1, 1, 1) -- RGB white
+                inputLabel:SetText("Texture File Name (.tga):")
+                inputLabel:SetTextColor(1, 1, 1)
+                editBox:SetText("")
             end
-            -- Clean up test texture
             testTexture:Hide()
         else
-            editBox:SetLabel(" Texture File Name (.tga): Texture file is invalid!")
-            editBox.label:SetTextColor(1, 0, 0) -- RGB bright red
+            inputLabel:SetText("Error: Invalid texture file!")
+            inputLabel:SetTextColor(1, 0, 0)
         end
     end)
-    addButton.text:SetTextColor(1, 1, 1) -- RGB white
-
-    local removeButton = AceGUI:Create("Button")
-    removeButton:SetText("Remove")
-    removeButton:SetWidth(80)
-    removeButton:SetCallback("OnClick", function()
+    
+    removeButton:SetScript("OnClick", function()
         local text = editBox:GetText()
         if type(text) == "string" and text ~= "" then
             local removed = TextureManager:RemoveTexture(text, parentAddon)
             if removed then
                 parentAddon:Print("Removed texture: " .. text)
-                editBox:SetLabel(" Texture File Name (.tga): Successfully removed " .. text)
-                editBox.label:SetTextColor(0, 1, 0) -- RGB bright green
+                inputLabel:SetText("Successfully removed " .. text)
+                inputLabel:SetTextColor(0, 1, 0)
+                editBox:SetText("")
             else
-                parentAddon:Print("Texture not found: " .. text)
-                editBox:SetLabel(" Texture File Path: Couldn't find texture!")
-                editBox.label:SetTextColor(1, 0, 0) -- RGB bright red
+                inputLabel:SetText("Error: Texture not found!")
+                inputLabel:SetTextColor(1, 0, 0)
             end
         else
-            parentAddon:Print("Please enter a valid texture name to remove.")
-            editBox:SetLabel(" Texture File Path: Texture file required")
-            editBox.label:SetTextColor(1, 0, 0) -- RGB bright red
+            inputLabel:SetText("Error: Texture name required!")
+            inputLabel:SetTextColor(1, 0, 0)
         end
     end)
-    removeButton.text:SetTextColor(1, 1, 1) -- RGB white
-
-    local editModeButton = AceGUI:Create("Button")
-    editModeButton:SetText("Edit Mode")
-    editModeButton:SetWidth(100)
-    editModeButton:SetCallback("OnClick", function()
-        window.frame:Hide()
+    
+    editModeButton:SetScript("OnClick", function()
+        window:Hide()
         if EditModeManagerFrame and EditModeManagerFrame.Show then
             EditModeManagerFrame:Show()
         else
             parentAddon:Print("[Error] Edit Mode Manager not available!")
         end
     end)
-    editModeButton.text:SetTextColor(1, 1, 1) -- RGB white
-
-    buttonBar:AddChild(spacer1)
-    buttonBar:AddChild(addButton)
-    buttonBar:AddChild(spacer2)
-    buttonBar:AddChild(removeButton)
-    buttonBar:AddChild(spacer3)
-    buttonBar:AddChild(editModeButton)
-    window:AddChild(buttonBar)
-
+    
+    editBox:SetScript("OnEnterPressed", function(self)
+        addButton:Click()
+        self:ClearFocus()
+    end)
+    
     return window
 end
 
@@ -195,7 +192,7 @@ function TextureManager:ShowTexture(name, parentAddon)
     texture:SetTexture(textureData.path)
 
     -- Setup edit mode functionality using the EditMode module
-    EditMode:SetupEditModeForFrame(frame, parentAddon, name)
+    EditMode:EnableTextureFrameEditMode(frame, parentAddon, name)
 
     frame:Show()
     TextureManager.frames[name] = frame
