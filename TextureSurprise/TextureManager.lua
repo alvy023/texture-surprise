@@ -10,7 +10,6 @@ local AceGUI = LibStub("AceGUI-3.0")
 
 -- TextureManager Global Variable
 TextureManager = {}
-local SYSTEM_ID_TEXTURESURPRISE = 37001 -- Unique system ID for Edit Mode
 
 TextureManager.frames = TextureManager.frames or {}
 
@@ -37,7 +36,6 @@ function TextureManager:Create(parentAddon)
     editBox:SetLabel(" Texture File Name (.tga):")
     editBox:SetWidth(278)
     editBox.label:SetTextColor(1, 1, 1) -- RGB white
-    -- editBox.editbox:SetScript("OnTextChanged", EditBox_OnTextChanged)
 
     editBar:AddChild(spacer)
     editBar:AddChild(editBox)
@@ -179,250 +177,27 @@ function TextureManager:ShowTexture(name, parentAddon)
         return
     end
     
-    -- Create the frame for the texture
+    -- Create the frame for the texture with Edit Mode template
     local frame = CreateFrame("Frame", "TextureSurpriseFrame_"..name, UIParent, "EditModeSystemTemplate")
-        frame.parentAddon = parentAddon
-        frame.isSelected = false
-        frame.locked = textureData.locked
-        frame:SetSize(textureData.width, textureData.height)
-        local offsetX = textureData.x or 0
-        local offsetY = textureData.y or 0
-        frame:SetPoint("CENTER", UIParent, "CENTER", offsetX, offsetY)
-        frame:SetAlpha(textureData.alpha)
-        frame:SetFrameStrata(textureData.strata)
-        frame:SetFrameLevel(textureData.level)
-        -- Add edit mode overlay
-        frame.EditModeHighlight = frame:CreateTexture(nil, "OVERLAY")
-        frame.EditModeHighlight:SetAllPoints(frame)
-        frame.EditModeHighlight:Hide()
+    
+    -- Set frame properties
+    frame:SetSize(textureData.width, textureData.height)
+    local offsetX = textureData.x or 0
+    local offsetY = textureData.y or 0
+    frame:SetPoint("CENTER", UIParent, "CENTER", offsetX, offsetY)
+    frame:SetAlpha(textureData.alpha)
+    frame:SetFrameStrata(textureData.strata)
+    frame:SetFrameLevel(textureData.level)
 
-        -- Add the texture
-        local texture = frame:CreateTexture(nil, "ARTWORK")
-        texture:SetAllPoints(frame)
-        texture:SetTexture(textureData.path)
+    -- Add the texture
+    local texture = frame:CreateTexture(nil, "ARTWORK")
+    texture:SetAllPoints(frame)
+    texture:SetTexture(textureData.path)
 
-        -- Register with Edit Mode
-        if EditModeManagerFrame and EditModeManagerFrame.RegisterSystemFrame then
-            EditModeManagerFrame:RegisterSystemFrame(frame, SYSTEM_ID_TEXTURESURPRISE)
-        end
+    -- Setup edit mode functionality using the EditMode module
+    EditMode:SetupEditModeForFrame(frame, parentAddon, name)
 
-        -- Check frame selection for Edit Mode highlight
-        frame:SetScript("OnMouseDown", function(self, button)
-            if EditModeManagerFrame and EditModeManagerFrame.editModeActive then
-                if button then
-                    self.isSelected = true
-                    self.EditModeHighlight:SetColorTexture(1, 0.82, 0, 0.5) -- yellow
-                    -- Show AceGUI menu for editing width, height, alpha
-                    if not self.menu then
-                        local menu = AceGUI:Create("Window-TS")
-                        menu:SetTitle("Edit Texture")
-                        menu:SetWidth(250)
-                        menu:SetHeight(280)
-                        menu:SetLayout("Flow")
-
-                        local widthBox = AceGUI:Create("EditBox")
-                        widthBox:SetLabel("Width")
-                        widthBox:SetText(tostring(textureData.width))
-                        widthBox:SetWidth(80)
-                        widthBox:SetCallback("OnEnterPressed", function(_, _, val)
-                            local num = tonumber(val)
-                            if num and num > 0 then
-                                textureData.width = num
-                                self:SetWidth(num)
-                            end
-                        end)
-                        menu:AddChild(widthBox)
-
-                        local heightBox = AceGUI:Create("EditBox")
-                        heightBox:SetLabel("Height")
-                        heightBox:SetText(tostring(textureData.height))
-                        heightBox:SetWidth(80)
-                        heightBox:SetCallback("OnEnterPressed", function(_, _, val)
-                            local num = tonumber(val)
-                            if num and num > 0 then
-                                textureData.height = num
-                                self:SetHeight(num)
-                            end
-                        end)
-                        menu:AddChild(heightBox)
-
-                        local alphaSlider = AceGUI:Create("Slider")
-                        alphaSlider:SetLabel("Alpha")
-                        alphaSlider:SetSliderValues(0, 1, 0.01)
-                        alphaSlider:SetValue(textureData.alpha or 1)
-                        alphaSlider:SetWidth(200)
-                        alphaSlider:SetCallback("OnValueChanged", function(_, _, val)
-                            textureData.alpha = val
-                            self:SetAlpha(val)
-                        end)
-                        menu:AddChild(alphaSlider)
-
-                        local strataBox = AceGUI:Create("Dropdown")
-                        strataBox:SetLabel("Frame Strata")
-                        strataBox:SetList({BACKGROUND="BACKGROUND",LOW="LOW",MEDIUM="MEDIUM",HIGH="HIGH",DIALOG="DIALOG",TOOLTIP="TOOLTIP"})
-                        strataBox:SetValue(textureData.strata or "MEDIUM")
-                        strataBox:SetWidth(120)
-                        strataBox:SetCallback("OnValueChanged", function(_, _, val)
-                            textureData.strata = val
-                            self:SetFrameStrata(val)
-                        end)
-                        menu:AddChild(strataBox)
-
-                        local levelBox = AceGUI:Create("EditBox")
-                        levelBox:SetLabel("Frame Level")
-                        levelBox:SetWidth(80)
-                        levelBox:SetText(tostring(textureData.level or self:GetFrameLevel()))
-                        levelBox:SetCallback("OnEnterPressed", function(_, _, val)
-                            local num = tonumber(val)
-                            if num then
-                                textureData.level = num
-                                self:SetFrameLevel(num)
-                            end
-                        end)
-                        menu:AddChild(levelBox)
-
-                        local lockBtn = AceGUI:Create("Button")
-                        lockBtn:SetText(textureData.locked and "Unlock" or "Lock")
-                        lockBtn:SetWidth(80)
-                        lockBtn:SetCallback("OnClick", function()
-                            textureData.locked = not textureData.locked
-                            frame.locked = textureData.locked
-                            if textureData.locked then
-                                self:SetMovable(false)
-                                lockBtn:SetText("Unlock")
-                            else
-                                self:SetMovable(true)
-                                lockBtn:SetText("Lock")
-                            end
-                        end)
-                        menu:AddChild(lockBtn)
-
-                        local removeBtn = AceGUI:Create("Button")
-                        removeBtn:SetText("Remove")
-                        removeBtn:SetWidth(80)
-                        removeBtn:SetCallback("OnClick", function()
-                            TextureManager:RemoveTexture(name, self.parentAddon)
-                            self:Hide()
-                            menu:Hide()
-                            menu:Release()
-                            self.menu = nil
-                        end)
-                        menu:AddChild(removeBtn)
-
-                        menu:SetCallback("OnClose", function()
-                            self.menu = nil
-                        end)
-
-                        self.menu = menu
-                    end
-                    self.menu:Show()
-                end
-            end
-        end)
-        WorldFrame:HookScript("OnMouseDown", function(_, button)
-            if EditModeManagerFrame and EditModeManagerFrame.editModeActive and button == "LeftButton" then
-                if frame.isSelected then
-                    frame.isSelected = false
-                    frame.EditModeHighlight:SetColorTexture(0, 0.56, 1, 0.3) -- blue
-                end
-            end
-        end)
-
-        -- Implement required Edit Mode methods
-        frame.GetSystemSettingDisplayData = function(self)
-            return {
-                position = {
-                    point = "CENTER",
-                    relativeTo = UIParent,
-                    relativePoint = "CENTER",
-                    offsetX = textureData.x or 0,
-                    offsetY = textureData.y or 0,
-                }
-            }
-        end
-        frame.UpdateSystemSetting = function(self, systemID, settingName, newValue)
-            if settingName == "position" then
-                local position = newValue
-                local offsetX = position.offsetX or 0
-                local offsetY = position.offsetY or 0
-                
-                -- Save to database
-                self.parentAddon.db.profile.textures[name].x = offsetX
-                self.parentAddon.db.profile.textures[name].y = offsetY
-            end
-        end
-        frame.OnSystemSettingChange = function(self, systemID, settingName, newValue)
-            if settingName == "position" then
-                self:UpdateSystemSetting(systemID, settingName, newValue)
-            end
-        end
-        frame.OnEditModeEnter = function(self)
-            self:EnableMouse(true)
-            self:SetMovable(true)
-            self:RegisterForDrag("LeftButton")
-            self:SetScript("OnDragStart", function(self)
-                if not frame.locked then
-                    self:StartMoving()
-                end
-            end)
-            self:SetScript("OnDragStop", function(self)
-                self:StopMovingOrSizing()
-                local frameX, frameY = self:GetCenter()
-                local screenWidth, screenHeight = UIParent:GetSize()
-                local centerX, centerY = screenWidth / 2, screenHeight / 2
-                local relativeX = frameX - centerX
-                local relativeY = frameY - centerY
-                
-                -- Use Edit Mode system to update position
-                local newPosition = {
-                    point = "CENTER",
-                    relativeTo = UIParent,
-                    relativePoint = "CENTER",
-                    offsetX = relativeX,
-                    offsetY = relativeY,
-                }
-                
-                -- Update through Edit Mode system
-                if self.UpdateSystemSetting then
-                    self:UpdateSystemSetting(SYSTEM_ID_TEXTURESURPRISE, "position", newPosition)
-                end
-            end)
-            self.EditModeHighlight:Show()
-            self.EditModeHighlight:SetColorTexture(0, 0.56, 1, 0.3) -- blue
-        end
-        frame.OnEditModeExit = function(self)
-            -- Store current position before Edit Mode does anything
-            local currentX, currentY = self:GetCenter()
-            local screenWidth, screenHeight = UIParent:GetSize()
-            local centerX, centerY = screenWidth / 2, screenHeight / 2
-            local savedOffsetX = currentX - centerX
-            local savedOffsetY = currentY - centerY
-            
-            -- Disable edit mode functionality
-            self:EnableMouse(false)
-            self:SetMovable(false)
-            self:RegisterForDrag()
-            self:SetScript("OnDragStart", nil)
-            self:SetScript("OnDragStop", nil)
-            self.EditModeHighlight:Hide()
-            if self.menu then
-                self.menu:Hide()
-            end
-            
-            -- Immediately restore position after this function completes
-            self:SetScript("OnUpdate", function(frame)
-                -- Check if Edit Mode is no longer active
-                if not (EditModeManagerFrame and EditModeManagerFrame.editModeActive) then
-                    -- Restore the position
-                    frame:ClearAllPoints()
-                    frame:SetPoint("CENTER", UIParent, "CENTER", savedOffsetX, savedOffsetY)
-                    -- Remove the OnUpdate script
-                    frame:SetScript("OnUpdate", nil)
-                end
-            end)
-        end
-
-        frame:Show()
+    frame:Show()
     TextureManager.frames[name] = frame
 end
 
@@ -437,6 +212,10 @@ function TextureManager:RemoveTexture(name, parentAddon)
     parentAddon.db.profile.textures[name] = nil
     local frame = TextureManager.frames[name]
     if frame then
+        if frame.menu then
+            frame.menu:Hide()
+            frame.menu:Release()
+        end
         frame:Hide()
         TextureManager.frames[name] = nil
     end
