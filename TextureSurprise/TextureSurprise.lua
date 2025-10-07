@@ -14,7 +14,6 @@ local LDBIcon = LibStub("LibDBIcon-1.0")
 
 -- Initialize TS as AceAddon module
 TextureSurprise = AceAddon:NewAddon("TextureSurprise", "AceConsole-3.0", "AceEvent-3.0")
-local TextureManager = require("TextureManager")
 local textureManagerWindow = nil
 
 -- Initialize minimap button
@@ -87,6 +86,7 @@ end
 --- @param: None
 --- @return: None
 function TextureSurprise:PLAYER_ENTERING_WORLD()
+    self:Print("Player entering world")
     if textureManagerWindow == nil then
         TextureSurprise:CreateTextureManager()
         textureManagerWindow:Hide()
