@@ -19,29 +19,29 @@ TextureManager.frames = TextureManager.frames or {}
 --- @return: The created window object
 function TextureManager:Create(parentAddon)
     -- Use styled interface if available
-    local window = Interface.CreateStyledWindow("Texture Manager", 420, 300, true)
+    local window = Interface:CreateStyledWindow("Texture Manager", 300, 150, true)
     
     -- Create input area
     local inputFrame = CreateFrame("Frame", nil, window.content)
-    inputFrame:SetPoint("TOPLEFT", window.content, "TOPLEFT", 20, -20)
-    inputFrame:SetPoint("TOPRIGHT", window.content, "TOPRIGHT", -20, -20)
-    inputFrame:SetHeight(80)
-    
-    -- Add category header
-    local inputHeader = Interface.CreateCategoryDivider(inputFrame, false)
-    inputHeader:SetText("Add New Texture")
-    inputHeader:SetPoint("TOPLEFT", inputFrame, "TOPLEFT", 0, 0)
+    inputFrame:SetPoint("TOPLEFT", window.content, "TOPLEFT", 0, -32)
+    inputFrame:SetPoint("TOPRIGHT", window.content, "TOPRIGHT", 0, -32)
+    inputFrame:SetHeight(40)
     
     -- Create input box
     local editBox = CreateFrame("EditBox", nil, inputFrame, "InputBoxTemplate")
-    editBox:SetSize(280, 25)
-    editBox:SetPoint("TOPLEFT", inputFrame, "TOPLEFT", 0, -35)
+    editBox:SetSize(240, 25)
+    editBox:SetPoint("TOP", inputFrame, "TOP", 2, 0)
     editBox:SetAutoFocus(false)
     
     local inputLabel = inputFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     inputLabel:SetText("Texture File Name (.tga):")
     inputLabel:SetTextColor(1, 1, 1)
-    inputLabel:SetPoint("BOTTOMLEFT", editBox, "TOPLEFT", 0, 2)
+    inputLabel:SetPoint("BOTTOMLEFT", editBox, "TOPLEFT", -2, 2)
+
+    -- Add divider
+    local inputHeader = Interface:CreateCategoryDivider(inputFrame, true)
+    inputHeader:SetText("")
+    inputHeader:SetPoint("TOPLEFT", inputFrame, "BOTTOMLEFT", 7, 5)
     
     -- Create button area
     local buttonFrame = CreateFrame("Frame", nil, window.content)
@@ -52,7 +52,7 @@ function TextureManager:Create(parentAddon)
     -- Add buttons
     local addButton = CreateFrame("Button", nil, buttonFrame, "UIPanelButtonTemplate")
     addButton:SetSize(80, 25)
-    addButton:SetPoint("LEFT", buttonFrame, "LEFT", 0, 0)
+    addButton:SetPoint("LEFT", buttonFrame, "LEFT", 10, 0)
     addButton:SetText("Add")
     
     local removeButton = CreateFrame("Button", nil, buttonFrame, "UIPanelButtonTemplate")
@@ -66,11 +66,15 @@ function TextureManager:Create(parentAddon)
     editModeButton:SetText("Edit Mode")
     
     -- Button functionality
+    editBox:SetScript("OnEnterPressed", function(self)
+        addButton:Click()
+        self:ClearFocus()
+    end)
+
     addButton:SetScript("OnClick", function()
         local text = editBox:GetText()
         if type(text) == "string" and text:lower():sub(-4) == ".tga" then
             local texturePath = "Interface\\AddOns\\TextureSurprise\\textures\\" .. text
-            parentAddon:Print("Testing texture path: " .. texturePath)
             
             -- Test if texture exists
             local testTexture = window:CreateTexture(nil, "ARTWORK")
@@ -78,13 +82,15 @@ function TextureManager:Create(parentAddon)
             if not testTexture:GetTexture() then
                 inputLabel:SetText("Error: Couldn't find file!")
                 inputLabel:SetTextColor(1, 0, 0)
-            else
+            elseif parentAddon.db.profile.textures[text] == nil then
                 TextureManager:StoreTexture(text, texturePath, 0, 0, 64, 64, parentAddon)
                 TextureManager:ShowTexture(text, parentAddon)
-                parentAddon:Print("Added texture: " .. texturePath)
                 inputLabel:SetText("Texture File Name (.tga):")
                 inputLabel:SetTextColor(1, 1, 1)
                 editBox:SetText("")
+            else
+                inputLabel:SetText("Error: Texture already exists!")
+                inputLabel:SetTextColor(1, 0, 0)
             end
             testTexture:Hide()
         else
@@ -98,8 +104,7 @@ function TextureManager:Create(parentAddon)
         if type(text) == "string" and text ~= "" then
             local removed = TextureManager:RemoveTexture(text, parentAddon)
             if removed then
-                parentAddon:Print("Removed texture: " .. text)
-                inputLabel:SetText("Successfully removed " .. text)
+                inputLabel:SetText("Successfully removed texture")
                 inputLabel:SetTextColor(0, 1, 0)
                 editBox:SetText("")
             else
@@ -121,9 +126,11 @@ function TextureManager:Create(parentAddon)
         end
     end)
     
-    editBox:SetScript("OnEnterPressed", function(self)
-        addButton:Click()
-        self:ClearFocus()
+    -- Reset input label on close
+    window:SetScript("OnHide", function()
+        inputLabel:SetText("Texture File Name (.tga):")
+        inputLabel:SetTextColor(1, 1, 1)
+        editBox:SetText("")
     end)
     
     return window
@@ -211,7 +218,6 @@ function TextureManager:RemoveTexture(name, parentAddon)
     if frame then
         if frame.menu then
             frame.menu:Hide()
-            frame.menu:Release()
         end
         frame:Hide()
         TextureManager.frames[name] = nil

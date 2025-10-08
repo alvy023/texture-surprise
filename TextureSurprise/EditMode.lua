@@ -83,13 +83,33 @@ end
 function EditMode.EditModeMixin:InitializeEditMode()
     -- Add edit mode overlay
     self.EditModeHighlight = self:CreateTexture(nil, "OVERLAY")
-    self.EditModeHighlight:SetAllPoints(self)
+    -- Start with initial positioning
+    self:UpdateHighlightPosition()
     self.EditModeHighlight:Hide()
     DisableSharpening(self.EditModeHighlight)
     
     -- Initialize edit mode state
     self.isSelected = false
     self.editModeActive = false
+end
+
+--- Description: Updates the highlight overlay position to be 10% larger than the frame
+--- @param None
+--- @return: None
+function EditMode.EditModeMixin:UpdateHighlightPosition()
+    if not self.EditModeHighlight then return end
+    
+    -- Get current frame dimensions
+    local frameWidth = self:GetWidth()
+    local frameHeight = self:GetHeight()
+    
+    -- Calculate 10% increase (5% on each side)
+    local widthIncrease = frameWidth * 0.2
+    local heightIncrease = frameHeight * 0.2
+    
+    self.EditModeHighlight:ClearAllPoints()
+    self.EditModeHighlight:SetPoint("TOPLEFT", self, "TOPLEFT", -widthIncrease, heightIncrease)
+    self.EditModeHighlight:SetPoint("BOTTOMRIGHT", self, "BOTTOMRIGHT", widthIncrease, -heightIncrease)
 end
 
 --- Description: Creates an edit menu for the frame
@@ -101,7 +121,7 @@ function EditMode.EditModeMixin:CreateEditMenu(textureName, textureData)
         return nil -- Interface not available
     end
     
-    local menu = Interface.CreateStyledWindow("Edit: " .. textureName, 320, 400, true)
+    local menu = Interface:CreateStyledWindow("Edit: " .. textureName, 250, 300, true)
     local frame = self -- Reference to the source frame
     
     -- Set up menu properties and cleanup
@@ -116,62 +136,51 @@ function EditMode.EditModeMixin:CreateEditMenu(textureName, textureData)
     end)
     
     -- Create scroll area for controls
-    local scrollFrame = CreateFrame("ScrollFrame", nil, menu.content, "UIPanelScrollFrameTemplate")
-    scrollFrame:SetPoint("TOPLEFT", menu.content, "TOPLEFT", 10, -10)
-    scrollFrame:SetPoint("BOTTOMRIGHT", menu.content, "BOTTOMRIGHT", -30, 10)
-    
-    local scrollChild = CreateFrame("Frame", nil, scrollFrame)
-    scrollChild:SetSize(280, 600)
-    scrollFrame:SetScrollChild(scrollChild)
-    
-    -- Add category dividers and controls
-    local yOffset = -20
+    local menuContent = CreateFrame("Frame", nil, menu.content)
+    menuContent:SetPoint("TOPLEFT", menu.content, "TOPLEFT", 10, -10)
+    menuContent:SetPoint("BOTTOMRIGHT", menu.content, "BOTTOMRIGHT", -30, 10)
     
     -- Position Category
-    local positionHeader = Interface.CreateCategoryDivider(scrollChild, false)
+    local positionHeader = Interface:CreateCategoryDivider(menuContent, true)
     positionHeader:SetText("Position & Size")
-    positionHeader:SetPoint("TOPLEFT", scrollChild, "TOPLEFT", 10, yOffset)
-    yOffset = yOffset - 40
+    positionHeader:SetPoint("TOPLEFT", menuContent, "TOPLEFT", 15, -20)
     
     -- Width control
-    local widthBox = CreateFrame("EditBox", nil, scrollChild, "InputBoxTemplate")
+    local widthBox = CreateFrame("EditBox", nil, menuContent, "InputBoxTemplate")
     widthBox:SetSize(80, 20)
-    widthBox:SetPoint("TOPLEFT", scrollChild, "TOPLEFT", 10, yOffset)
+    widthBox:SetPoint("TOPLEFT", positionHeader, "BOTTOMLEFT", 10, -40)
     widthBox:SetText(tostring(textureData.width))
     widthBox:SetAutoFocus(false)
-    
-    local widthLabel = scrollChild:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+
+    local widthLabel = menuContent:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     widthLabel:SetText("Width:")
     widthLabel:SetPoint("BOTTOMLEFT", widthBox, "TOPLEFT", 0, 2)
     
     -- Height control
-    local heightBox = CreateFrame("EditBox", nil, scrollChild, "InputBoxTemplate")
+    local heightBox = CreateFrame("EditBox", nil, menuContent, "InputBoxTemplate")
     heightBox:SetSize(80, 20)
     heightBox:SetPoint("LEFT", widthBox, "RIGHT", 20, 0)
     heightBox:SetText(tostring(textureData.height))
     heightBox:SetAutoFocus(false)
-    
-    local heightLabel = scrollChild:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+
+    local heightLabel = menuContent:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     heightLabel:SetText("Height:")
     heightLabel:SetPoint("BOTTOMLEFT", heightBox, "TOPLEFT", 0, 2)
     
-    yOffset = yOffset - 60
-    
     -- Appearance Category
-    local appearanceHeader = Interface.CreateCategoryDivider(scrollChild, false)
+    local appearanceHeader = Interface:CreateCategoryDivider(menuContent, true)
     appearanceHeader:SetText("Appearance")
-    appearanceHeader:SetPoint("TOPLEFT", scrollChild, "TOPLEFT", 10, yOffset)
-    yOffset = yOffset - 40
+    appearanceHeader:SetPoint("TOPLEFT", widthBox, "BOTTOMLEFT", -10, -20)
     
     -- Alpha slider
-    local alphaSlider = CreateFrame("Slider", nil, scrollChild, "OptionsSliderTemplate")
-    alphaSlider:SetSize(200, 20)
-    alphaSlider:SetPoint("TOPLEFT", scrollChild, "TOPLEFT", 10, yOffset)
+    local alphaSlider = CreateFrame("Slider", nil, menuContent, "OptionsSliderTemplate")
+    alphaSlider:SetSize(185, 20)
+    alphaSlider:SetPoint("TOPLEFT", appearanceHeader, "BOTTOMLEFT", 5, -40)
     alphaSlider:SetMinMaxValues(0, 1)
     alphaSlider:SetValue(textureData.alpha or 1)
     alphaSlider:SetValueStep(0.01)
-    
-    local alphaLabel = scrollChild:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+
+    local alphaLabel = menuContent:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     alphaLabel:SetText("Alpha: " .. string.format("%.2f", textureData.alpha or 1))
     alphaLabel:SetPoint("BOTTOMLEFT", alphaSlider, "TOPLEFT", 0, 2)
     
@@ -181,19 +190,17 @@ function EditMode.EditModeMixin:CreateEditMenu(textureName, textureData)
         alphaLabel:SetText("Alpha: " .. string.format("%.2f", value))
     end)
     
-    yOffset = yOffset - 60
-    
     -- Action buttons at bottom
-    local removeBtn = CreateFrame("Button", nil, scrollChild, "UIPanelButtonTemplate")
+    local removeBtn = CreateFrame("Button", nil, menuContent, "UIPanelButtonTemplate")
     removeBtn:SetSize(100, 25)
-    removeBtn:SetPoint("BOTTOMLEFT", scrollChild, "BOTTOMLEFT", 10, 20)
+    removeBtn:SetPoint("BOTTOMLEFT", menuContent, "BOTTOMLEFT", 10, 20)
     removeBtn:SetText("Remove")
     removeBtn:SetScript("OnClick", function()
         TextureManager:RemoveTexture(textureName, frame.parentAddon)
         menu:Hide()
     end)
-    
-    local lockBtn = CreateFrame("Button", nil, scrollChild, "UIPanelButtonTemplate")
+
+    local lockBtn = CreateFrame("Button", nil, menuContent, "UIPanelButtonTemplate")
     lockBtn:SetSize(100, 25)
     lockBtn:SetPoint("LEFT", removeBtn, "RIGHT", 10, 0)
     lockBtn:SetText(textureData.locked and "Unlock" or "Lock")
@@ -209,7 +216,7 @@ function EditMode.EditModeMixin:CreateEditMenu(textureName, textureData)
         local value = tonumber(self:GetText())
         if value and value > 0 then
             textureData.width = value
-            frame:SetWidth(value)
+            frame:UpdateSize(value, nil)
         end
         self:ClearFocus()
     end)
@@ -218,7 +225,7 @@ function EditMode.EditModeMixin:CreateEditMenu(textureName, textureData)
         local value = tonumber(self:GetText())
         if value and value > 0 then
             textureData.height = value
-            frame:SetHeight(value)
+            frame:UpdateSize(nil, value)
         end
         self:ClearFocus()
     end)
@@ -322,6 +329,22 @@ function EditMode.EditModeTextureMixin:UpdatePosition()
         textureData.x = relativeX
         textureData.y = relativeY
     end
+end
+
+--- Description: Updates the frame size and refreshes highlight overlay
+--- @param width: New width value
+--- @param height: New height value (optional)
+--- @return: None
+function EditMode.EditModeTextureMixin:UpdateSize(width, height)
+    if width then
+        self:SetWidth(width)
+    end
+    if height then
+        self:SetHeight(height)
+    end
+    
+    -- Update the highlight overlay to maintain 20 pixel margin
+    self:UpdateHighlightPosition()
 end
 
 --- Description: Displays the edit menu for the texture

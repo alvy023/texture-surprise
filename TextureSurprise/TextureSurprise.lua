@@ -135,6 +135,9 @@ function TextureSurprise:ShowTextureManager()
         self:Print("[ERROR] Unable to open texture manager!")
         return
     end
+    if EditModeManagerFrame and EditModeManagerFrame:IsShown() then
+        return
+    end
     textureManagerWindow:Show()
 end
 

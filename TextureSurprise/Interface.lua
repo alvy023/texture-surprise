@@ -26,11 +26,14 @@ Interface.CloseButtonMixin = {}
 --- @param None
 --- @return: None
 function Interface.CloseButtonMixin:OnClick()
-    local parent = self:GetParent()
-    if parent.CloseUI then
-        parent:CloseUI()
-    else
-        parent:Hide()
+    -- Get the window frame (parent of the header)
+    local header = self:GetParent()
+    local window = header:GetParent()
+    
+    if window and window.CloseUI then
+        window:CloseUI()
+    elseif window then
+        window:Hide()
     end
 end
 
@@ -57,15 +60,15 @@ function Interface.CloseButtonMixin:Initialize()
     self:SetSize(BUTTON_MIN_SIZE, BUTTON_MIN_SIZE)
 
     self.Texture = self:CreateTexture(nil, "ARTWORK")
-    self.Texture:SetTexture(ASSET_PATH .. "CustomIcon-White-X")
+    self.Texture:SetTexture(ASSET_PATH .. "PlumberCloseButton.tga")
     self.Texture:SetPoint("CENTER", self, "CENTER", 0, 0)
-    self.Texture:SetSize(16, 16)
+    self.Texture:SetSize(32, 32)
     DisableSharpening(self.Texture)
 
     self.Highlight = self:CreateTexture(nil, "HIGHLIGHT")
-    self.Highlight:SetTexture(ASSET_PATH .. "CustomIcon-White-X")
+    self.Highlight:SetTexture(ASSET_PATH .. "PlumberCloseButton.tga")
     self.Highlight:SetPoint("CENTER", self, "CENTER", 0, 0)
-    self.Highlight:SetSize(16, 16)
+    self.Highlight:SetSize(32, 32)
     self.Highlight:SetAlpha(0.7)
     DisableSharpening(self.Highlight)
 
@@ -116,12 +119,12 @@ function Interface:CreateCategoryDivider(parent, alignCenter)
     divider:SetHeight(4)
     divider:SetPoint("TOPLEFT", fontString, "BOTTOMLEFT", 0, -4)
     divider:SetPoint("RIGHT", parent, "RIGHT", -8, 0)
-    divider:SetTexture(ASSET_PATH .. "PlumberDivider")
+    divider:SetTexture(ASSET_PATH .. "PlumberDividerHorizontal.tga")
     divider:SetVertexColor(0.5, 0.5, 0.5)
     DisableSharpening(divider)
 
     fontString.Divider = divider
-    Mixin(fontString, CategoryDividerMixin)
+    Mixin(fontString, Interface.CategoryDividerMixin)
 
     return fontString
 end
@@ -167,9 +170,6 @@ function Interface:CreateHeaderFrame(parent, showCloseButton)
     local f = CreateFrame("Frame", nil, parent)
     f:ClearAllPoints()
 
-    local p = {}
-    f.pieces = p
-
     f.Title = f:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     f.Title:SetJustifyH("CENTER")
     f.Title:SetJustifyV("MIDDLE")
@@ -177,12 +177,14 @@ function Interface:CreateHeaderFrame(parent, showCloseButton)
     f.Title:SetPoint("CENTER", f, "TOP", 0, -9)
 
     if showCloseButton then
-        f.CloseButton = Interface.CreateCloseButton(f)
-        f.CloseButton:SetPoint("CENTER", f, "TOPRIGHT", -9, -9)
+        f.CloseButton = Interface:CreateCloseButton(f)
+        f.CloseButton:SetPoint("CENTER", f, "TOPRIGHT", -8, -8)
     end
 
     -- Create 9-piece frame using PlumberFrame texture
-    local tex = ASSET_PATH .. "PlumberFrame"
+    local tex = ASSET_PATH .. "PlumberFrameOpaque.tga"
+    local p = {}
+    f.pieces = p
 
     for i = 1, 9 do
         p[i] = f:CreateTexture(nil, "BORDER")
@@ -192,8 +194,8 @@ function Interface:CreateHeaderFrame(parent, showCloseButton)
     end
 
     -- Position corner pieces
-    p[1]:SetPoint("CENTER", f, "TOPLEFT", 0, -8)
-    p[3]:SetPoint("CENTER", f, "TOPRIGHT", 0, -8)
+    p[1]:SetPoint("CENTER", f, "TOPLEFT", 0, 0) -- 0,-8
+    p[3]:SetPoint("CENTER", f, "TOPRIGHT", 0, 0) -- 0,-8
     p[7]:SetPoint("CENTER", f, "BOTTOMLEFT", 0, 0)
     p[9]:SetPoint("CENTER", f, "BOTTOMRIGHT", 0, 0)
 
@@ -210,7 +212,7 @@ function Interface:CreateHeaderFrame(parent, showCloseButton)
     p[8]:SetPoint("BOTTOMRIGHT", p[9], "BOTTOMLEFT", 0, 0)
 
     -- Set texture coordinates for 9-piece
-    local size = 64
+    local size = 16
     p[1]:SetSize(size, size)
     p[1]:SetTexCoord(0, 0.25, 0, 0.25)
     
@@ -237,7 +239,7 @@ function Interface:CreateHeaderFrame(parent, showCloseButton)
     p[9]:SetSize(size, size)
     p[9]:SetTexCoord(0.75, 1, 0.75, 1)
 
-    Mixin(f, HeaderFrameMixin)
+    Mixin(f, Interface.HeaderFrameMixin)
     f:ShowCloseButton(showCloseButton or false)
     f:EnableMouse(true)
 
@@ -252,19 +254,27 @@ end
 --- @param showCloseButton (Boolean to show or hide the close button)
 --- @return: Styled window frame
 function Interface:CreateStyledWindow(title, width, height, showCloseButton)
-    local frame = CreateFrame("Frame", nil, UIParent)
+    local frame = CreateFrame("Frame", nil, UIParent, "BackdropTemplate")
     frame:SetSize(width or 400, height or 300)
     frame:SetPoint("CENTER")
     frame:SetFrameStrata("DIALOG")
     frame:SetMovable(true)
     frame:EnableMouse(true)
     frame:RegisterForDrag("LeftButton")
+    frame:SetBackdrop({
+        bgFile = "Interface\\Tooltips\\UI-Tooltip-Background",
+        edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
+        tile = true, tileSize = 16, edgeSize = 16,
+        insets = { left = 4, right = 4, top = 4, bottom = 4 }
+    })
+    frame:SetBackdropColor(0, 0, 0, 1)
     
+    -- local backTexture = ASSET_PATH .. "PlumberFrameOpaque.tga"
     -- Create header
-    local header = Interface.CreateHeaderFrame(frame, showCloseButton)
+    local header = Interface:CreateHeaderFrame(frame, showCloseButton)
     header:SetPoint("TOPLEFT", frame, "TOPLEFT", 0, 0)
     header:SetPoint("TOPRIGHT", frame, "TOPRIGHT", 0, 0)
-    header:SetHeight(32)
+    header:SetHeight(16)
     header:SetTitle(title or "Texture Surprise")
     
     -- Make header draggable
@@ -282,16 +292,8 @@ function Interface:CreateStyledWindow(title, width, height, showCloseButton)
 
     -- Create content area with background
     local content = CreateFrame("Frame", nil, frame, "BackdropTemplate")
-    content:SetPoint("TOPLEFT", header, "BOTTOMLEFT", 8, 0)
-    content:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -8, 8)
-    content:SetBackdrop({
-        bgFile = ASSET_PATH .. "PlumberFrameOpaque",
-        tile = true,
-        tileSize = 16,
-        edgeSize = 0,
-        insets = { left = 0, right = 0, top = 0, bottom = 0 }
-    })
-    content:SetBackdropColor(0.1, 0.1, 0.1, 0.8)
+    content:SetPoint("TOPLEFT", header, "BOTTOMLEFT", 0, 0)
+    content:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", 0, 0)
 
     frame.header = header
     frame.content = content
