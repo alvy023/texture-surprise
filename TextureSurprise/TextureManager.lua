@@ -160,6 +160,7 @@ function TextureManager:StoreTexture(name, path, x, y, width, height, parentAddo
         alpha = 1.0,
         strata = "MEDIUM",
         level = 1,
+        rotation = 0,
     }
 end
 
@@ -197,6 +198,8 @@ function TextureManager:ShowTexture(name, parentAddon)
     local texture = frame:CreateTexture(nil, "ARTWORK")
     texture:SetAllPoints(frame)
     texture:SetTexture(textureData.path)
+    texture:SetRotation(math.rad(textureData.rotation))
+    frame.texture = texture
 
     -- Setup edit mode functionality using the EditMode module
     EditModeTS:EnableTextureFrameEditMode(frame, parentAddon, name)

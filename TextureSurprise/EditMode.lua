@@ -118,16 +118,17 @@ end
 --- @return: The created menu frame or nil if Interface not available
 function EditModeTS.EditModeMixin:CreateEditMenu(textureName, textureData)
     if not Interface or not Interface.CreateStyledWindow then
-        return nil -- Interface not available
+        return nil
     end
     
-    local menu = Interface:CreateStyledWindow("Edit: " .. textureName, 250, 350, true)
-    local frame = self -- Reference to the source frame
+    local menu = Interface:CreateStyledWindow("Edit: " .. textureName, 250, 400, true)
+    local frame = self
     
     -- Set up menu properties and cleanup
     menu.textureName = textureName
     menu.textureData = textureData
     menu.sourceFrame = frame
+    menu:SetFrameStrata("TOOLTIP")
     
     menu:SetScript("OnHide", function()
         if frame then
@@ -142,7 +143,7 @@ function EditModeTS.EditModeMixin:CreateEditMenu(textureName, textureData)
     
     -- Position Category
     local positionHeader = Interface:CreateCategoryDivider(menuContent, true)
-    positionHeader:SetText("Position & Size")
+    positionHeader:SetText("Position")
     positionHeader:SetPoint("TOPLEFT", menuContent, "TOPLEFT", 15, -20)
     
     -- Width control
@@ -151,6 +152,14 @@ function EditModeTS.EditModeMixin:CreateEditMenu(textureName, textureData)
     widthBox:SetPoint("TOPLEFT", positionHeader, "BOTTOMLEFT", 10, -40)
     widthBox:SetText(tostring(textureData.width))
     widthBox:SetAutoFocus(false)
+    widthBox:SetScript("OnEnterPressed", function(self)
+        local value = tonumber(self:GetText())
+        if value and value > 0 then
+            textureData.width = value
+            frame:UpdateSize(value, nil)
+        end
+        self:ClearFocus()
+    end)
 
     local widthLabel = menuContent:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     widthLabel:SetText("Width:")
@@ -162,15 +171,47 @@ function EditModeTS.EditModeMixin:CreateEditMenu(textureName, textureData)
     heightBox:SetPoint("LEFT", widthBox, "RIGHT", 20, 0)
     heightBox:SetText(tostring(textureData.height))
     heightBox:SetAutoFocus(false)
+    heightBox:SetScript("OnEnterPressed", function(self)
+        local value = tonumber(self:GetText())
+        if value and value > 0 then
+            textureData.height = value
+            frame:UpdateSize(nil, value)
+        end
+        self:ClearFocus()
+    end)
 
     local heightLabel = menuContent:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     heightLabel:SetText("Height:")
     heightLabel:SetPoint("BOTTOMLEFT", heightBox, "TOPLEFT", -4, 2)
+
+    -- Rotation slider
+    local rotationSlider = CreateFrame("Slider", nil, menuContent, "OptionsSliderTemplate")
+    rotationSlider:SetSize(185, 20)
+    rotationSlider:SetPoint("TOPLEFT", widthBox, "BOTTOMLEFT", -4, -30)
+    rotationSlider:SetMinMaxValues(-180, 180)
+    rotationSlider:SetValue(textureData.rotation or 0)
+    rotationSlider:SetValueStep(15)
+    rotationSlider:SetObeyStepOnDrag(true)
+    rotationSlider.Low:SetText("-180°")
+    rotationSlider.High:SetText("180°")
+    rotationSlider:EnableKeyboard(true)
+
+    local rotationLabel = menuContent:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    rotationLabel:SetText("Rotation: " .. string.format("%.0f°", textureData.rotation or 0))
+    rotationLabel:SetPoint("BOTTOMLEFT", rotationSlider, "TOPLEFT", 0, 2)
+
+    rotationSlider:SetScript("OnValueChanged", function(self, value)
+        rotationLabel:SetText("Rotation: " .. string.format("%.0f°", value))
+        value = -1 * math.floor(value + 0.5)
+        textureData.rotation = value
+        frame:UpdateRotation(value)
+    end)
+    
     
     -- Appearance Category
     local appearanceHeader = Interface:CreateCategoryDivider(menuContent, true)
     appearanceHeader:SetText("Appearance")
-    appearanceHeader:SetPoint("TOPLEFT", widthBox, "BOTTOMLEFT", -10, -20)
+    appearanceHeader:SetPoint("TOPLEFT", rotationSlider, "BOTTOMLEFT", -6, -24)
     
     -- Alpha slider
     local alphaSlider = CreateFrame("Slider", nil, menuContent, "OptionsSliderTemplate")
@@ -195,15 +236,17 @@ function EditModeTS.EditModeMixin:CreateEditMenu(textureName, textureData)
     strataDropdown:SetWidth(120)
     strataDropdown.frame:SetParent(menuContent)
     strataDropdown.frame:SetPoint("TOPLEFT", alphaSlider, "BOTTOMLEFT", -3, -30)
-    strataDropdown:SetLabel("") -- Remove the internal label
-    strataDropdown:SetList({
+    strataDropdown:SetLabel("") 
+    local strataList = {
         ["BACKGROUND"] = "BACKGROUND",
         ["LOW"] = "LOW",
         ["MEDIUM"] = "MEDIUM",
         ["HIGH"] = "HIGH",
         ["DIALOG"] = "DIALOG",
         ["TOOLTIP"] = "TOOLTIP"
-    })
+    }
+    local strataOrder = {"BACKGROUND", "LOW", "MEDIUM", "HIGH", "DIALOG", "TOOLTIP"}
+    strataDropdown:SetList(strataList, strataOrder)
     strataDropdown:SetValue(textureData.strata or "MEDIUM")
     strataDropdown:SetCallback("OnValueChanged", function(_, _, value)
         textureData.strata = value
@@ -252,25 +295,6 @@ function EditModeTS.EditModeMixin:CreateEditMenu(textureName, textureData)
         frame.locked = textureData.locked
         frame:SetMovable(not textureData.locked and frame.editModeActive)
         lockBtn:SetText(textureData.locked and "Unlock" or "Lock")
-    end)
-    
-    -- Event handlers for input boxes
-    widthBox:SetScript("OnEnterPressed", function(self)
-        local value = tonumber(self:GetText())
-        if value and value > 0 then
-            textureData.width = value
-            frame:UpdateSize(value, nil)
-        end
-        self:ClearFocus()
-    end)
-    
-    heightBox:SetScript("OnEnterPressed", function(self)
-        local value = tonumber(self:GetText())
-        if value and value > 0 then
-            textureData.height = value
-            frame:UpdateSize(nil, value)
-        end
-        self:ClearFocus()
     end)
     
     return menu
@@ -387,6 +411,15 @@ function EditModeTS.EditModeTextureMixin:UpdateSize(width, height)
     
     -- Update the highlight overlay to maintain 20 pixel margin
     self:UpdateHighlightPosition()
+end
+
+--- Description: Updates the texture rotation
+--- @param rotation: New rotation value in degrees
+--- @return: None
+function EditModeTS.EditModeTextureMixin:UpdateRotation(rotation)
+    if rotation and self.texture then
+        self.texture:SetRotation(math.rad(rotation))
+    end
 end
 
 --- Description: Displays the edit menu for the texture
