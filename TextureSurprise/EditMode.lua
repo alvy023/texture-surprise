@@ -9,7 +9,7 @@
 local AceGUI = LibStub("AceGUI-3.0")
 
 -- EditMode Global Variable
-EditMode = {}
+EditModeTS = {}
 
 -- Constants
 local SYSTEM_ID_TEXTURESURPRISE = 37001 -- Unique system ID for Edit Mode
@@ -23,12 +23,12 @@ end
 
 -- Edit Mode Mixins and Methods
 --- Base EditModeMixin - Provides core edit mode functionality (highlighting, selection, basic behavior)
-EditMode.EditModeMixin = {}
+EditModeTS.EditModeMixin = {}
 
 --- Description: Shows the highlight overlay when in edit mode
 --- @param state: Boolean - true to show highlight, false to hide
 --- @return: None
-function EditMode.EditModeMixin:SetHighlighted(state)
+function EditModeTS.EditModeMixin:SetHighlighted(state)
     if not self.EditModeHighlight then return end
     
     if state then
@@ -44,7 +44,7 @@ end
 --- Description: Shows the selection overlay when selected in edit mode
 --- @param state: Boolean - true to show selection, false to hide
 --- @return: None
-function EditMode.EditModeMixin:SetSelected(state)
+function EditModeTS.EditModeMixin:SetSelected(state)
     if not self.EditModeHighlight then return end
     
     if state then
@@ -61,7 +61,7 @@ end
 --- Description: Enters edit mode, enabling basic edit mode functionality
 --- @param None
 --- @return: None
-function EditMode.EditModeMixin:OnEditModeEnter()
+function EditModeTS.EditModeMixin:OnEditModeEnter()
     self.editModeActive = true
     self:EnableMouse(true)
     self:SetHighlighted(true)
@@ -70,7 +70,7 @@ end
 --- Description: Exits edit mode, disabling edit mode functionality
 --- @param None
 --- @return: None
-function EditMode.EditModeMixin:OnEditModeExit()
+function EditModeTS.EditModeMixin:OnEditModeExit()
     self.editModeActive = false
     self:EnableMouse(false)
     self:SetHighlighted(false)
@@ -80,7 +80,7 @@ end
 --- Description: Initializes the edit mode overlay for the frame
 --- @param None
 --- @return: None
-function EditMode.EditModeMixin:InitializeEditMode()
+function EditModeTS.EditModeMixin:InitializeEditMode()
     -- Add edit mode overlay
     self.EditModeHighlight = self:CreateTexture(nil, "OVERLAY")
     -- Start with initial positioning
@@ -96,7 +96,7 @@ end
 --- Description: Updates the highlight overlay position to be 10% larger than the frame
 --- @param None
 --- @return: None
-function EditMode.EditModeMixin:UpdateHighlightPosition()
+function EditModeTS.EditModeMixin:UpdateHighlightPosition()
     if not self.EditModeHighlight then return end
     
     -- Get current frame dimensions
@@ -116,12 +116,12 @@ end
 --- @param textureName: Name of the texture being edited
 --- @param textureData: Data object for the texture
 --- @return: The created menu frame or nil if Interface not available
-function EditMode.EditModeMixin:CreateEditMenu(textureName, textureData)
+function EditModeTS.EditModeMixin:CreateEditMenu(textureName, textureData)
     if not Interface or not Interface.CreateStyledWindow then
         return nil -- Interface not available
     end
     
-    local menu = Interface:CreateStyledWindow("Edit: " .. textureName, 250, 300, true)
+    local menu = Interface:CreateStyledWindow("Edit: " .. textureName, 250, 350, true)
     local frame = self -- Reference to the source frame
     
     -- Set up menu properties and cleanup
@@ -135,7 +135,7 @@ function EditMode.EditModeMixin:CreateEditMenu(textureName, textureData)
         end
     end)
     
-    -- Create scroll area for controls
+    -- Create content area for controls
     local menuContent = CreateFrame("Frame", nil, menu.content)
     menuContent:SetPoint("TOPLEFT", menu.content, "TOPLEFT", 10, -10)
     menuContent:SetPoint("BOTTOMRIGHT", menu.content, "BOTTOMRIGHT", -30, 10)
@@ -154,7 +154,7 @@ function EditMode.EditModeMixin:CreateEditMenu(textureName, textureData)
 
     local widthLabel = menuContent:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     widthLabel:SetText("Width:")
-    widthLabel:SetPoint("BOTTOMLEFT", widthBox, "TOPLEFT", 0, 2)
+    widthLabel:SetPoint("BOTTOMLEFT", widthBox, "TOPLEFT", -4, 2)
     
     -- Height control
     local heightBox = CreateFrame("EditBox", nil, menuContent, "InputBoxTemplate")
@@ -165,7 +165,7 @@ function EditMode.EditModeMixin:CreateEditMenu(textureName, textureData)
 
     local heightLabel = menuContent:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     heightLabel:SetText("Height:")
-    heightLabel:SetPoint("BOTTOMLEFT", heightBox, "TOPLEFT", 0, 2)
+    heightLabel:SetPoint("BOTTOMLEFT", heightBox, "TOPLEFT", -4, 2)
     
     -- Appearance Category
     local appearanceHeader = Interface:CreateCategoryDivider(menuContent, true)
@@ -189,6 +189,49 @@ function EditMode.EditModeMixin:CreateEditMenu(textureName, textureData)
         frame:SetAlpha(value)
         alphaLabel:SetText("Alpha: " .. string.format("%.2f", value))
     end)
+
+    -- Strata control (dropdown, level)
+    local strataDropdown = AceGUI:Create("Dropdown")
+    strataDropdown:SetWidth(120)
+    strataDropdown.frame:SetParent(menuContent)
+    strataDropdown.frame:SetPoint("TOPLEFT", alphaSlider, "BOTTOMLEFT", -3, -30)
+    strataDropdown:SetLabel("") -- Remove the internal label
+    strataDropdown:SetList({
+        ["BACKGROUND"] = "BACKGROUND",
+        ["LOW"] = "LOW",
+        ["MEDIUM"] = "MEDIUM",
+        ["HIGH"] = "HIGH",
+        ["DIALOG"] = "DIALOG",
+        ["TOOLTIP"] = "TOOLTIP"
+    })
+    strataDropdown:SetValue(textureData.strata or "MEDIUM")
+    strataDropdown:SetCallback("OnValueChanged", function(_, _, value)
+        textureData.strata = value
+        frame:SetFrameStrata(value)
+    end)
+    
+    -- Create custom label for strata dropdown
+    local strataDropdownLabel = menuContent:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    strataDropdownLabel:SetText("Frame Strata:")
+    strataDropdownLabel:SetPoint("BOTTOMLEFT", strataDropdown.frame, "TOPLEFT", 2, 2)
+    
+    local strataBox = CreateFrame("EditBox", nil, menuContent, "InputBoxTemplate")
+    strataBox:SetSize(48, 20)
+    strataBox:SetPoint("LEFT", strataDropdown.frame, "RIGHT", 20, 0)
+    strataBox:SetText(tostring(textureData.level))
+    strataBox:SetAutoFocus(false)
+    strataBox:SetScript("OnEnterPressed", function(self)
+        local value = tonumber(self:GetText())
+        if value and value >= 0 then
+            textureData.level = value
+            frame:SetFrameLevel(value)
+        end
+        self:ClearFocus()
+    end)
+
+    local strataLevelLabel = menuContent:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    strataLevelLabel:SetText("Level:")
+    strataLevelLabel:SetPoint("BOTTOMLEFT", strataBox, "TOPLEFT", -4, 5)
     
     -- Action buttons at bottom
     local removeBtn = CreateFrame("Button", nil, menuContent, "UIPanelButtonTemplate")
@@ -234,15 +277,15 @@ function EditMode.EditModeMixin:CreateEditMenu(textureName, textureData)
 end
 
 --- EditModeTextureMixin - Extends EditModeMixin for texture frames specifically
-EditMode.EditModeTextureMixin = {}
-for k, v in pairs(EditMode.EditModeMixin) do
-    EditMode.EditModeTextureMixin[k] = v
+EditModeTS.EditModeTextureMixin = {}
+for k, v in pairs(EditModeTS.EditModeMixin) do
+    EditModeTS.EditModeTextureMixin[k] = v
 end
 
 --- Description: Handles the start of dragging the texture frame
 --- @param None
 --- @return: None
-function EditMode.EditModeTextureMixin:OnDragStart()
+function EditModeTS.EditModeTextureMixin:OnDragStart()
     if not self.locked and self.editModeActive then
         self:StartMoving()
     end
@@ -251,7 +294,7 @@ end
 --- Description: Handles the stop of dragging the texture frame
 --- @param None
 --- @return: None
-function EditMode.EditModeTextureMixin:OnDragStop()
+function EditModeTS.EditModeTextureMixin:OnDragStop()
     if not self.locked and self.editModeActive then
         self:StopMovingOrSizing()
         self:UpdatePosition()
@@ -261,7 +304,7 @@ end
 --- Description: Shows the highlight overlay when hovering (texture-specific override)
 --- @param None
 --- @return: None
-function EditMode.EditModeTextureMixin:ShowHighlighted()
+function EditModeTS.EditModeTextureMixin:ShowHighlighted()
     if not self:IsShown() then return end
     self:SetHighlighted(true)
 end
@@ -269,7 +312,7 @@ end
 --- Description: Shows the selection overlay and opens the edit menu (texture-specific override)
 --- @param None
 --- @return: None
-function EditMode.EditModeTextureMixin:ShowSelected()
+function EditModeTS.EditModeTextureMixin:ShowSelected()
     if not self:IsShown() then return end
     self:SetSelected(true)
     self:ShowEditMenu()
@@ -278,7 +321,7 @@ end
 --- Description: Hides the selection overlay and closes the edit menu
 --- @param None
 --- @return: None
-function EditMode.EditModeTextureMixin:HideSelection()
+function EditModeTS.EditModeTextureMixin:HideSelection()
     self:SetSelected(false)
     self:SetHighlighted(false)
     if self.menu then
@@ -289,10 +332,10 @@ end
 --- Description: Enters edit mode for texture frames (extends base functionality)
 --- @param None
 --- @return: None
-function EditMode.EditModeTextureMixin:OnEditModeEnter()
+function EditModeTS.EditModeTextureMixin:OnEditModeEnter()
     -- Call parent method
-    EditMode.EditModeMixin.OnEditModeEnter(self)
-    
+    EditModeTS.EditModeMixin.OnEditModeEnter(self)
+
     -- Add texture-specific functionality
     self:SetMovable(not self.locked)
     self:RegisterForDrag("LeftButton")
@@ -301,7 +344,7 @@ end
 --- Description: Exits edit mode for texture frames (extends base functionality)
 --- @param None
 --- @return: None
-function EditMode.EditModeTextureMixin:OnEditModeExit()
+function EditModeTS.EditModeTextureMixin:OnEditModeExit()
     -- Add texture-specific cleanup first
     self:SetMovable(false)
     self:RegisterForDrag()
@@ -310,13 +353,13 @@ function EditMode.EditModeTextureMixin:OnEditModeExit()
     end
     
     -- Call parent method
-    EditMode.EditModeMixin.OnEditModeExit(self)
+    EditModeTS.EditModeMixin.OnEditModeExit(self)
 end
 
 --- Description: Updates the texture's position in the database after dragging
 --- @param None
 --- @return: None
-function EditMode.EditModeTextureMixin:UpdatePosition()
+function EditModeTS.EditModeTextureMixin:UpdatePosition()
     local frameX, frameY = self:GetCenter()
     local screenWidth, screenHeight = UIParent:GetSize()
     local centerX, centerY = screenWidth / 2, screenHeight / 2
@@ -324,10 +367,9 @@ function EditMode.EditModeTextureMixin:UpdatePosition()
     local relativeY = frameY - centerY
     
     -- Update database
-    local textureData = self.parentAddon.db.profile.textures[self.textureName]
-    if textureData then
-        textureData.x = relativeX
-        textureData.y = relativeY
+    if self.parentAddon.db.profile.textures[self.textureName] then
+        self.parentAddon.db.profile.textures[self.textureName].x = relativeX
+        self.parentAddon.db.profile.textures[self.textureName].y = relativeY
     end
 end
 
@@ -335,7 +377,7 @@ end
 --- @param width: New width value
 --- @param height: New height value (optional)
 --- @return: None
-function EditMode.EditModeTextureMixin:UpdateSize(width, height)
+function EditModeTS.EditModeTextureMixin:UpdateSize(width, height)
     if width then
         self:SetWidth(width)
     end
@@ -350,7 +392,7 @@ end
 --- Description: Displays the edit menu for the texture
 --- @param None
 --- @return: None
-function EditMode.EditModeTextureMixin:ShowEditMenu()
+function EditModeTS.EditModeTextureMixin:ShowEditMenu()
     if self.menu then
         self.menu:Show()
         return
@@ -373,7 +415,7 @@ end
 --- @param parentAddon: Reference to the main addon object
 --- @param textureName: Name of the texture
 --- @return: None
-function EditMode:EnableTextureFrameEditMode(frame, parentAddon, textureName)
+function EditModeTS:EnableTextureFrameEditMode(frame, parentAddon, textureName)
     -- Apply the EditModeTextureMixin (which inherits from EditModeMixin)
     Mixin(frame, self.EditModeTextureMixin)
     
@@ -403,33 +445,9 @@ function EditMode:EnableTextureFrameEditMode(frame, parentAddon, textureName)
         end
     end)
     
-    -- Hook into Edit Mode events
-    frame:HookScript("OnShow", function(self)
-        if EditModeManagerFrame and EditModeManagerFrame.editModeActive then
-            self:OnEditModeEnter()
-        end
-    end)
-    
-    -- Register with Edit Mode if available
-    if EditModeManagerFrame and EditModeManagerFrame.RegisterSystemFrame then
-        EditModeManagerFrame:RegisterSystemFrame(frame, SYSTEM_ID_TEXTURESURPRISE)
-    end
-    
-    -- Hook Edit Mode events
-    local function OnEditModeChange()
-        if EditModeManagerFrame and EditModeManagerFrame.editModeActive then
-            frame:OnEditModeEnter()
-        else
-            frame:OnEditModeExit()
-        end
-    end
-    
-    -- Listen for edit mode changes
-    if EditModeManagerFrame then
-        EditModeManagerFrame:HookScript("OnShow", OnEditModeChange)
-        EditModeManagerFrame:HookScript("OnHide", OnEditModeChange)
-    end
+    EventRegistry:RegisterCallback("EditMode.Enter", frame.OnEditModeEnter, frame)
+    EventRegistry:RegisterCallback("EditMode.Exit", frame.OnEditModeExit, frame)
 end
 
 -- Return the EditMode table
-return EditMode
+return EditModeTS

@@ -64,22 +64,30 @@ function TextureSurprise:OnInitialize()
     -- Register addon for event notifications
     self:RegisterEvent("PLAYER_LOGIN")
     self:RegisterEvent("PLAYER_ENTERING_WORLD")
+    self:RegisterEvent("EDIT_MODE_LAYOUTS_UPDATED")            
+end
+
+--- Description: Common initialization handler for login and updates
+--- @param: None
+--- @return: None
+function TextureSurprise:InitializeTexturesAndManager()
+    if textureManagerWindow == nil then
+        TextureSurprise:CreateTextureManager()
+        textureManagerWindow:Hide()
+    end
+    -- Show all saved textures
+    if self.db and self.db.profile and self.db.profile.textures then
+        for name, _ in pairs(self.db.profile.textures) do
+            TextureManager:ShowTexture(name, self)
+        end
+    end
 end
 
 --- Description: PLAYER_LOGIN event handler
 --- @param: None
 --- @return: None
 function TextureSurprise:PLAYER_LOGIN()
-    if textureManagerWindow == nil then
-        TextureSurprise:CreateTextureManager()
-        textureManagerWindow:Hide()
-    end
-    -- Show all saved textures on login
-    if self.db and self.db.profile and self.db.profile.textures then
-        for name, _ in pairs(self.db.profile.textures) do
-            TextureManager:ShowTexture(name, self)
-        end
-    end
+    self:InitializeTexturesAndManager()
 end
 
 --- Description: Player reload event handler
@@ -87,16 +95,15 @@ end
 --- @return: None
 function TextureSurprise:PLAYER_ENTERING_WORLD()
     self:Print("Player entering world")
-    if textureManagerWindow == nil then
-        TextureSurprise:CreateTextureManager()
-        textureManagerWindow:Hide()
-    end
-    -- Show all saved textures on login
-    if self.db and self.db.profile and self.db.profile.textures then
-        for name, _ in pairs(self.db.profile.textures) do
-            TextureManager:ShowTexture(name, self)
-        end
-    end
+    self:InitializeTexturesAndManager()
+end
+
+--- Description: Edit mode layouts updated event handler
+--- @param: None
+--- @return: None
+function TextureSurprise:EDIT_MODE_LAYOUTS_UPDATED()
+    self:Print("Edit mode layouts updated")
+    self:InitializeTexturesAndManager()
 end
 
 -- Functions

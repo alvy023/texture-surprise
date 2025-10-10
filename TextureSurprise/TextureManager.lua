@@ -199,7 +199,7 @@ function TextureManager:ShowTexture(name, parentAddon)
     texture:SetTexture(textureData.path)
 
     -- Setup edit mode functionality using the EditMode module
-    EditMode:EnableTextureFrameEditMode(frame, parentAddon, name)
+    EditModeTS:EnableTextureFrameEditMode(frame, parentAddon, name)
 
     frame:Show()
     TextureManager.frames[name] = frame
