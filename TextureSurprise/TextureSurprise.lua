@@ -94,7 +94,6 @@ end
 --- @param: None
 --- @return: None
 function TextureSurprise:PLAYER_ENTERING_WORLD()
-    self:Print("Player entering world")
     self:InitializeTexturesAndManager()
 end
 
@@ -102,7 +101,6 @@ end
 --- @param: None
 --- @return: None
 function TextureSurprise:EDIT_MODE_LAYOUTS_UPDATED()
-    self:Print("Edit mode layouts updated")
     self:InitializeTexturesAndManager()
 end
 

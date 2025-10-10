@@ -26,7 +26,6 @@ Interface.CloseButtonMixin = {}
 --- @param None
 --- @return: None
 function Interface.CloseButtonMixin:OnClick()
-    -- Get the window frame (parent of the header)
     local header = self:GetParent()
     local window = header:GetParent()
     
@@ -269,7 +268,6 @@ function Interface:CreateStyledWindow(title, width, height, showCloseButton)
     })
     frame:SetBackdropColor(0, 0, 0, 1)
     
-    -- local backTexture = ASSET_PATH .. "PlumberFrameOpaque.tga"
     -- Create header
     local header = Interface:CreateHeaderFrame(frame, showCloseButton)
     header:SetPoint("TOPLEFT", frame, "TOPLEFT", 0, 0)

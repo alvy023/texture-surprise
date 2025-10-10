@@ -32,6 +32,7 @@ function TextureManager:Create(parentAddon)
     editBox:SetSize(240, 25)
     editBox:SetPoint("TOP", inputFrame, "TOP", 2, 0)
     editBox:SetAutoFocus(false)
+    editBox:SetText("example_texture.tga")
     
     local inputLabel = inputFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     inputLabel:SetText("Texture File Name (.tga):")
@@ -85,9 +86,8 @@ function TextureManager:Create(parentAddon)
             elseif parentAddon.db.profile.textures[text] == nil then
                 TextureManager:StoreTexture(text, texturePath, 0, 0, 64, 64, parentAddon)
                 TextureManager:ShowTexture(text, parentAddon)
-                inputLabel:SetText("Texture File Name (.tga):")
-                inputLabel:SetTextColor(1, 1, 1)
-                editBox:SetText("")
+                inputLabel:SetText("Added: " .. text)
+                inputLabel:SetTextColor(0, 1, 0)
             else
                 inputLabel:SetText("Error: Texture already exists!")
                 inputLabel:SetTextColor(1, 0, 0)
@@ -130,7 +130,7 @@ function TextureManager:Create(parentAddon)
     window:SetScript("OnHide", function()
         inputLabel:SetText("Texture File Name (.tga):")
         inputLabel:SetTextColor(1, 1, 1)
-        editBox:SetText("")
+        editBox:SetText("example_texture.tga")
     end)
     
     return window
