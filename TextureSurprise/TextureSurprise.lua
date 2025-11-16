@@ -57,6 +57,13 @@ function TextureSurprise:OnInitialize()
     }, true)
     -- Register minimap button
     LDBIcon:Register("Texture Surprise", dataBroker, self.db.profile.minimap)
+    
+    -- Apply circular mask to the minimap button
+    local minimapButton = LDBIcon:GetMinimapButton("Texture Surprise")
+    if minimapButton and minimapButton.icon then
+        minimapButton.icon:SetTexCoord(0.06, 0.94, 0.06, 0.94)
+    end
+    
     -- Enable addon compartment entry
     if not self.db.profile.addonCompartment.hide then
         self:EnableAddonCompartment()
