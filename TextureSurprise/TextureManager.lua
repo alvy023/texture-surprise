@@ -19,23 +19,30 @@ TextureManager.frames = TextureManager.frames or {}
 --- @return: The created window object
 function TextureManager:Create(parentAddon)
     -- Use styled interface if available
-    local window = Interface:CreateStyledWindow("Texture Manager", 300, 150, true)
+    local window = Interface:CreateStyledWindow("Texture Manager", 300, 175, true)
     
     -- Create input area
     local inputFrame = CreateFrame("Frame", nil, window.content)
     inputFrame:SetPoint("TOPLEFT", window.content, "TOPLEFT", 0, -32)
     inputFrame:SetPoint("TOPRIGHT", window.content, "TOPRIGHT", 0, -32)
-    inputFrame:SetHeight(40)
+    inputFrame:SetHeight(70)
+    
+    -- Create instructions
+    local instructions = inputFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    instructions:SetPoint("TOP", inputFrame, "TOP", -8, 22)
+    instructions:SetText("Add .tga or .blp texture file to:\nInterface\\AddOns\\MyCustomTextures\\")
+    instructions:SetTextColor(1, 1, 1)
+    instructions:SetJustifyH("LEFT")
     
     -- Create input box
     local editBox = CreateFrame("EditBox", nil, inputFrame, "InputBoxTemplate")
     editBox:SetSize(240, 25)
-    editBox:SetPoint("TOP", inputFrame, "TOP", 2, 0)
+    editBox:SetPoint("TOP", inputFrame, "TOP", 2, -30)
     editBox:SetAutoFocus(false)
-    editBox:SetText("example_texture.tga")
+    editBox:SetText("example_texture_1.tga")
     
     local inputLabel = inputFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    inputLabel:SetText("Texture File Name (.tga):")
+    inputLabel:SetText("Texture File Name:")
     inputLabel:SetTextColor(1, 1, 1)
     inputLabel:SetPoint("BOTTOMLEFT", editBox, "TOPLEFT", -2, 2)
 
@@ -74,25 +81,37 @@ function TextureManager:Create(parentAddon)
 
     addButton:SetScript("OnClick", function()
         local text = editBox:GetText()
-        if type(text) == "string" and text:lower():sub(-4) == ".tga" then
-            local texturePath = "Interface\\AddOns\\TextureSurprise\\textures\\" .. text
+        if type(text) == "string" and (text:lower():sub(-4) == ".tga" or text:lower():sub(-4) == ".blp") then
+            local customPath = "Interface\\AddOns\\MyCustomTextures\\" .. text
+            local builtInPath = "Interface\\AddOns\\TextureSurprise\\textures\\" .. text
+            local texturePath = nil
             
-            -- Test if texture exists
+            -- Test custom texture path first then built-in
             local testTexture = window:CreateTexture(nil, "ARTWORK")
-            testTexture:SetTexture(texturePath)
-            if not testTexture:GetTexture() then
-                inputLabel:SetText("Error: Couldn't find file!")
+            testTexture:SetTexture(customPath)
+            if testTexture:GetTexture() then
+                texturePath = customPath
+            else
+                testTexture:SetTexture(builtInPath)
+                if testTexture:GetTexture() then
+                    texturePath = builtInPath
+                end
+            end
+            testTexture:Hide()
+            
+            if not texturePath then
+                inputLabel:SetText("Error: Couldn't find file in either directory!")
                 inputLabel:SetTextColor(1, 0, 0)
             elseif parentAddon.db.profile.textures[text] == nil then
                 TextureManager:StoreTexture(text, texturePath, 0, 0, 64, 64, parentAddon)
                 TextureManager:ShowTexture(text, parentAddon)
-                inputLabel:SetText("Added: " .. text)
+                local source = (texturePath == customPath) and "(custom)" or "(built-in)"
+                inputLabel:SetText("Added: " .. text .. " " .. source)
                 inputLabel:SetTextColor(0, 1, 0)
             else
                 inputLabel:SetText("Error: Texture already exists!")
                 inputLabel:SetTextColor(1, 0, 0)
             end
-            testTexture:Hide()
         else
             inputLabel:SetText("Error: Invalid texture file!")
             inputLabel:SetTextColor(1, 0, 0)
@@ -128,9 +147,9 @@ function TextureManager:Create(parentAddon)
     
     -- Reset input label on close
     window:SetScript("OnHide", function()
-        inputLabel:SetText("Texture File Name (.tga):")
+        inputLabel:SetText("Texture File Name:")
         inputLabel:SetTextColor(1, 1, 1)
-        editBox:SetText("example_texture.tga")
+        editBox:SetText("example_texture_1.tga")
     end)
     
     return window

@@ -1,6 +1,6 @@
-## Interface: 110200
+## Interface: 120000, 110207, 110205, 110200
 ## Title: Texture Surprise
-## Version: 0.1.0
+## Version: 0.2.0
 ## Notes: Display and adjust custom textures.
 ## Author: alvy023
 ## SavedVariables: TextureSurpriseDB
@@ -16,8 +16,6 @@ libs/Ace3/AceConsole-3.0/AceConsole-3.0.xml
 libs/Ace3/AceDB-3.0/AceDB-3.0.xml
 libs/Ace3/AceEvent-3.0/AceEvent-3.0.xml
 libs/Ace3/AceGUI-3.0/AceGUI-3.0.xml
-libs/Ace3-TS/AceGUI-IconButton-TS.lua
-libs/Ace3-TS/AceGUI-Window-TS.lua
 
 # Core Addon Files
 Interface.lua

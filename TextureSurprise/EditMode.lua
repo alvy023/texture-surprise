@@ -29,15 +29,20 @@ EditModeTS.EditModeMixin = {}
 --- @param state: Boolean - true to show highlight, false to hide
 --- @return: None
 function EditModeTS.EditModeMixin:SetHighlighted(state)
-    if not self.EditModeHighlight then return end
+    if not self.EditModeHighlightParts then return end
     
     if state then
-        self.EditModeHighlight:SetTexture(ASSET_PATH .. "PlumberEditMode")
-        self.EditModeHighlight:SetVertexColor(0, 0.56, 1, 0.3) -- Blue highlight
-        self.EditModeHighlight:Show()
+        -- Set texture and show all border parts
+        for _, part in pairs(self.EditModeHighlightParts) do
+            part:SetTexture(ASSET_PATH .. "PlumberEditMode")
+            part:Show()
+        end
         self.isSelected = false
     else
-        self.EditModeHighlight:Hide()
+        -- Hide all border parts
+        for _, part in pairs(self.EditModeHighlightParts) do
+            part:Hide()
+        end
     end
 end
 
@@ -45,15 +50,20 @@ end
 --- @param state: Boolean - true to show selection, false to hide
 --- @return: None
 function EditModeTS.EditModeMixin:SetSelected(state)
-    if not self.EditModeHighlight then return end
+    if not self.EditModeHighlightParts then return end
     
     if state then
-        self.EditModeHighlight:SetTexture(ASSET_PATH .. "PlumberEditModeSelect")
-        self.EditModeHighlight:SetVertexColor(1, 0.82, 0, 0.5) -- Yellow selection
-        self.EditModeHighlight:Show()
+        -- Set texture and show all border parts
+        for _, part in pairs(self.EditModeHighlightParts) do
+            part:SetTexture(ASSET_PATH .. "PlumberEditModeSelect")
+            part:Show()
+        end
         self.isSelected = true
     else
-        self.EditModeHighlight:Hide()
+        -- Hide all border parts
+        for _, part in pairs(self.EditModeHighlightParts) do
+            part:Hide()
+        end
         self.isSelected = false
     end
 end
@@ -77,39 +87,102 @@ function EditModeTS.EditModeMixin:OnEditModeExit()
     self:SetSelected(false)
 end
 
---- Description: Initializes the edit mode overlay for the frame
+--- Description: Initializes the edit mode overlay for the frame using 9-slice border technique
 --- @param None
 --- @return: None
 function EditModeTS.EditModeMixin:InitializeEditMode()
-    -- Add edit mode overlay
-    self.EditModeHighlight = self:CreateTexture(nil, "OVERLAY")
+    -- Create 9-slice border system instead of single stretched texture
+    self.EditModeHighlightParts = {}
+    
+    -- Create border pieces: corners, edges, and center
+    local borderParts = {
+        "TopLeft", "Top", "TopRight",
+        "Left", "Center", "Right", 
+        "BottomLeft", "Bottom", "BottomRight"
+    }
+    
+    for _, part in ipairs(borderParts) do
+        local texture = self:CreateTexture(nil, "OVERLAY")
+        DisableSharpening(texture)
+        self.EditModeHighlightParts[part] = texture
+        texture:Hide()
+    end
+    
     -- Start with initial positioning
     self:UpdateHighlightPosition()
-    self.EditModeHighlight:Hide()
-    DisableSharpening(self.EditModeHighlight)
     
     -- Initialize edit mode state
     self.isSelected = false
     self.editModeActive = false
 end
 
---- Description: Updates the highlight overlay position to be 10% larger than the frame
+--- Description: Updates the highlight overlay positions
 --- @param None
 --- @return: None
 function EditModeTS.EditModeMixin:UpdateHighlightPosition()
-    if not self.EditModeHighlight then return end
+    if not self.EditModeHighlightParts then return end
     
     -- Get current frame dimensions
     local frameWidth = self:GetWidth()
     local frameHeight = self:GetHeight()
     
-    -- Calculate 10% increase (5% on each side)
-    local widthIncrease = frameWidth * 0.2
-    local heightIncrease = frameHeight * 0.2
+    -- Border size (assuming the texture has 8-pixel borders)
+    local borderSize = 8
+    local totalWidth = frameWidth + borderSize 
+    local totalHeight = frameHeight + borderSize
     
-    self.EditModeHighlight:ClearAllPoints()
-    self.EditModeHighlight:SetPoint("TOPLEFT", self, "TOPLEFT", -widthIncrease, heightIncrease)
-    self.EditModeHighlight:SetPoint("BOTTOMRIGHT", self, "BOTTOMRIGHT", widthIncrease, -heightIncrease)
+    -- Calculate edge dimensions (center sections that can stretch)
+    local centerWidth = math.max(1, frameWidth)
+    local centerHeight = math.max(1, frameHeight)
+    
+    local parts = self.EditModeHighlightParts
+    
+    -- Position corners (fixed size, no stretching)
+    -- Top-left corner
+    parts.TopLeft:SetSize(borderSize, borderSize)
+    parts.TopLeft:SetPoint("TOPLEFT", self, "TOPLEFT", -borderSize, borderSize)
+    parts.TopLeft:SetTexCoord(0, 0.25, 0, 0.25) -- Top-left quarter
+    
+    -- Top-right corner  
+    parts.TopRight:SetSize(borderSize, borderSize)
+    parts.TopRight:SetPoint("TOPRIGHT", self, "TOPRIGHT", borderSize, borderSize)
+    parts.TopRight:SetTexCoord(0.75, 1, 0, 0.25) -- Top-right quarter
+    
+    -- Bottom-left corner
+    parts.BottomLeft:SetSize(borderSize, borderSize)
+    parts.BottomLeft:SetPoint("BOTTOMLEFT", self, "BOTTOMLEFT", -borderSize, -borderSize)
+    parts.BottomLeft:SetTexCoord(0, 0.25, 0.75, 1) -- Bottom-left quarter
+    
+    -- Bottom-right corner
+    parts.BottomRight:SetSize(borderSize, borderSize)
+    parts.BottomRight:SetPoint("BOTTOMRIGHT", self, "BOTTOMRIGHT", borderSize, -borderSize)
+    parts.BottomRight:SetTexCoord(0.75, 1, 0.75, 1) -- Bottom-right quarter
+    
+    -- Position edges (stretch in one direction)
+    -- Top edge
+    parts.Top:SetSize(centerWidth, borderSize)
+    parts.Top:SetPoint("TOP", self, "TOP", 0, borderSize)
+    parts.Top:SetTexCoord(0.25, 0.75, 0, 0.25) -- Top edge, horizontally tileable
+    
+    -- Bottom edge
+    parts.Bottom:SetSize(centerWidth, borderSize)
+    parts.Bottom:SetPoint("BOTTOM", self, "BOTTOM", 0, -borderSize)
+    parts.Bottom:SetTexCoord(0.25, 0.75, 0.75, 1) -- Bottom edge, horizontally tileable
+    
+    -- Left edge
+    parts.Left:SetSize(borderSize, centerHeight)
+    parts.Left:SetPoint("LEFT", self, "LEFT", -borderSize, 0)
+    parts.Left:SetTexCoord(0, 0.25, 0.25, 0.75) -- Left edge, vertically tileable
+    
+    -- Right edge
+    parts.Right:SetSize(borderSize, centerHeight)
+    parts.Right:SetPoint("RIGHT", self, "RIGHT", borderSize, 0)
+    parts.Right:SetTexCoord(0.75, 1, 0.25, 0.75) -- Right edge, vertically tileable
+    
+    -- Center (can stretch in both directions)
+    parts.Center:SetSize(centerWidth, centerHeight)
+    parts.Center:SetPoint("CENTER", self, "CENTER", 0, 0)
+    parts.Center:SetTexCoord(0.25, 0.75, 0.25, 0.75) -- Center, tileable in both directions
 end
 
 --- Description: Creates an edit menu for the frame
@@ -347,7 +420,11 @@ end
 --- @return: None
 function EditModeTS.EditModeTextureMixin:HideSelection()
     self:SetSelected(false)
-    self:SetHighlighted(false)
+    if EditModeManagerFrame and EditModeManagerFrame:IsShown() then
+        self:SetHighlighted(true)
+    else
+        self:SetHighlighted(false)
+    end
     if self.menu then
         self.menu:Hide()
     end
@@ -455,6 +532,7 @@ function EditModeTS:EnableTextureFrameEditMode(frame, parentAddon, textureName)
     -- Set frame properties
     frame.parentAddon = parentAddon
     frame.textureName = textureName
+    frame.systemName = "TextureSurprise_" .. textureName
     
     local textureData = parentAddon.db.profile.textures[textureName]
     frame.locked = textureData and textureData.locked or false
@@ -465,19 +543,38 @@ function EditModeTS:EnableTextureFrameEditMode(frame, parentAddon, textureName)
     -- Set up event handlers
     frame:SetScript("OnDragStart", frame.OnDragStart)
     frame:SetScript("OnDragStop", frame.OnDragStop)
-    
     frame:SetScript("OnMouseDown", function(self, button)
         if self.editModeActive and button == "LeftButton" then
             self:ShowSelected()
-            -- Clear other selections
-            for frameName, otherFrame in pairs(TextureManager.frames) do
-                if frameName ~= textureName and otherFrame.isSelected then
-                    otherFrame:ShowHighlighted()
-                end
-            end
         end
     end)
-    
+    frame:RegisterEvent("GLOBAL_MOUSE_DOWN")
+    frame:SetScript("OnEvent", function(self, event)
+        if event == "GLOBAL_MOUSE_DOWN" and self.editModeActive and self.isSelected then
+            -- Check if the mouse is over the edit menu before deselecting
+            if self.menu and self.menu:IsShown() then
+                local mouseX, mouseY = GetCursorPosition()
+                local scale = self.menu:GetEffectiveScale()
+                mouseX = mouseX / scale
+                mouseY = mouseY / scale
+                
+                -- Get menu bounds
+                local left = self.menu:GetLeft()
+                local right = self.menu:GetRight()
+                local top = self.menu:GetTop()
+                local bottom = self.menu:GetBottom()
+                
+                -- If mouse is inside the menu bounds, don't deselect
+                if mouseX >= left and mouseX <= right and mouseY >= bottom and mouseY <= top then
+                    return -- Don't deselect, click is inside menu
+                end
+            end
+            
+            -- Mouse is outside menu (or menu not shown), deselect
+            self:HideSelection()
+        end
+    end)
+
     EventRegistry:RegisterCallback("EditMode.Enter", frame.OnEditModeEnter, frame)
     EventRegistry:RegisterCallback("EditMode.Exit", frame.OnEditModeExit, frame)
 end
