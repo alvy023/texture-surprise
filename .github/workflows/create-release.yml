@@ -1,0 +1,91 @@
+name: Create Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version Number (e.g., 1.0.0)'
+        required: false
+        type: string
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          submodules: recursive
+      
+      - name: Get Version
+        id: get_version
+        run: |
+          if [ -n "${{ inputs.version }}" ]; then
+            VERSION="${{ inputs.version }}"
+          else
+            # Extract version from TextureSurprise.toc
+            VERSION=$(grep -oP '## Version: \K[0-9.]+' TextureSurprise/TextureSurprise.toc | head -1)
+            if [ -z "$VERSION" ]; then
+              echo "Error: Could not determine version"
+              exit 1
+            fi
+          fi
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Using version: $VERSION"
+      
+      - name: Extract Changelog Entry
+        id: changelog
+        run: |
+          VERSION="${{ steps.get_version.outputs.version }}"
+          
+          # Extract the relevant changelog section
+          python3 << 'EOF' > release_notes.md
+          import re
+          
+          version = "${{ steps.get_version.outputs.version }}"
+          
+          try:
+              with open('Changelog.md', 'r') as f:
+                  content = f.read()
+              
+              # Extract the section for this version
+              pattern = rf'## \[{re.escape(version)}\].*?\n(.*?)(?=\n## \[|$)'
+              match = re.search(pattern, content, re.DOTALL)
+              
+              if match:
+                  print(match.group(1).strip())
+              else:
+                  print(f"Release version {version}")
+          except FileNotFoundError:
+              print(f"Release version {version}")
+          EOF
+      
+      - name: Create Package
+        run: |
+          mkdir -p release
+          cd TextureSurprise
+          zip -r ../release/TextureSurprise-${{ steps.get_version.outputs.version }}.zip . \
+            -x "*.git*" \
+            -x "*/.git/*" \
+            -x "*/.*"
+
+      - name: Create Git Tag
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag "v${{ steps.get_version.outputs.version }}"
+          git push origin "v${{ steps.get_version.outputs.version }}"
+      
+      - name: Create Release
+        uses: softprops/action-gh-release@v2.2.2
+        with:
+          tag_name: v${{ steps.get_version.outputs.version }}
+          name: TextureSurprise v${{ steps.get_version.outputs.version }}
+          body_path: release_notes.md
+          files: release/TextureSurprise-${{ steps.get_version.outputs.version }}.zip
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
