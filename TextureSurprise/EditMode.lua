@@ -202,6 +202,41 @@ function EditModeTS.EditModeMixin:CreateEditMenu(textureName, textureData)
     menu.textureData = textureData
     menu.sourceFrame = frame
     menu:SetFrameStrata("TOOLTIP")
+
+    -- Initialize editMenuPosition if it doesn't exist
+    if frame.parentAddon and frame.parentAddon.db and frame.parentAddon.db.profile then
+        if not frame.parentAddon.db.profile.editMenuPosition then
+            frame.parentAddon.db.profile.editMenuPosition = { x = 0, y = 0 }
+        end
+        
+        -- Restore saved menu position
+        local pos = frame.parentAddon.db.profile.editMenuPosition
+        menu:ClearAllPoints()
+        menu:SetPoint("CENTER", UIParent, "CENTER", pos.x, pos.y)
+    end
+    
+    -- Hook the header's OnMouseUp to save position when dragging stops
+    if menu.header then
+        local originalOnMouseUp = menu.header:GetScript("OnMouseUp")
+        menu.header:SetScript("OnMouseUp", function(self, button)
+            -- Call the original handler first
+            if originalOnMouseUp then
+                originalOnMouseUp(self, button)
+            end
+            
+            -- Save the menu position after dragging
+            if button == "LeftButton" and frame.parentAddon and frame.parentAddon.db and frame.parentAddon.db.profile then
+                if not frame.parentAddon.db.profile.editMenuPosition then
+                    frame.parentAddon.db.profile.editMenuPosition = { x = 0, y = 0 }
+                end
+                local x, y = menu:GetCenter()
+                local screenWidth, screenHeight = UIParent:GetSize()
+                local centerX, centerY = screenWidth / 2, screenHeight / 2
+                frame.parentAddon.db.profile.editMenuPosition.x = x - centerX
+                frame.parentAddon.db.profile.editMenuPosition.y = y - centerY
+            end
+        end)
+    end
     
     menu:SetScript("OnHide", function()
         if frame then
