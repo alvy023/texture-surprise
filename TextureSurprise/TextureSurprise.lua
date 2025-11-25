@@ -53,8 +53,13 @@ function TextureSurprise:OnInitialize()
             minimap = { hide = false },
             addonCompartment = { hide = false },
             textures = {},
+            editMenuPosition = {
+                x = 0,
+                y = 0,
+            },
         }
     }, true)
+    
     -- Register minimap button
     LDBIcon:Register("Texture Surprise", dataBroker, self.db.profile.minimap)
     

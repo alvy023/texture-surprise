@@ -194,7 +194,7 @@ function EditModeTS.EditModeMixin:CreateEditMenu(textureName, textureData)
         return nil
     end
     
-    local menu = Interface:CreateStyledWindow("Edit: " .. textureName, 250, 500, true)
+    local menu = Interface:CreateStyledWindow("Edit: " .. textureName, 225, 400, true)
     local frame = self
     
     -- Setup menu properties and cleanup
@@ -202,6 +202,41 @@ function EditModeTS.EditModeMixin:CreateEditMenu(textureName, textureData)
     menu.textureData = textureData
     menu.sourceFrame = frame
     menu:SetFrameStrata("TOOLTIP")
+
+    -- Initialize editMenuPosition if it doesn't exist
+    if frame.parentAddon and frame.parentAddon.db and frame.parentAddon.db.profile then
+        if not frame.parentAddon.db.profile.editMenuPosition then
+            frame.parentAddon.db.profile.editMenuPosition = { x = 0, y = 0 }
+        end
+        
+        -- Restore saved menu position
+        local pos = frame.parentAddon.db.profile.editMenuPosition
+        menu:ClearAllPoints()
+        menu:SetPoint("CENTER", UIParent, "CENTER", pos.x, pos.y)
+    end
+    
+    -- Hook the header's OnMouseUp to save position when dragging stops
+    if menu.header then
+        local originalOnMouseUp = menu.header:GetScript("OnMouseUp")
+        menu.header:SetScript("OnMouseUp", function(self, button)
+            -- Call the original handler first
+            if originalOnMouseUp then
+                originalOnMouseUp(self, button)
+            end
+            
+            -- Save the menu position after dragging
+            if button == "LeftButton" and frame.parentAddon and frame.parentAddon.db and frame.parentAddon.db.profile then
+                if not frame.parentAddon.db.profile.editMenuPosition then
+                    frame.parentAddon.db.profile.editMenuPosition = { x = 0, y = 0 }
+                end
+                local x, y = menu:GetCenter()
+                local screenWidth, screenHeight = UIParent:GetSize()
+                local centerX, centerY = screenWidth / 2, screenHeight / 2
+                frame.parentAddon.db.profile.editMenuPosition.x = x - centerX
+                frame.parentAddon.db.profile.editMenuPosition.y = y - centerY
+            end
+        end)
+    end
     
     menu:SetScript("OnHide", function()
         if frame then
@@ -211,16 +246,16 @@ function EditModeTS.EditModeMixin:CreateEditMenu(textureName, textureData)
     
     -- Create content area for controls
     local menuContent = CreateFrame("Frame", nil, menu.content)
-    menuContent:SetPoint("TOPLEFT", menu.content, "TOPLEFT", 10, -10)
-    menuContent:SetPoint("BOTTOMRIGHT", menu.content, "BOTTOMRIGHT", -30, 10)
+    menuContent:SetPoint("TOPLEFT", menu.content, "TOPLEFT", 0, -5)
+    menuContent:SetPoint("BOTTOMRIGHT", menu.content, "BOTTOMRIGHT", 0, 2)
     
     -- Helper function to create increment/decrement buttons
     local function CreateIncrementButtons(parent, anchorFrame, onIncrement, onDecrement, step)
         step = step or 1
         
         local upBtn = CreateFrame("Button", nil, parent)
-        upBtn:SetSize(20, 20)
-        upBtn:SetPoint("LEFT", anchorFrame, "RIGHT", 5, 0)
+        upBtn:SetSize(25, 25)
+        upBtn:SetPoint("LEFT", anchorFrame, "RIGHT", 0, 7)
         upBtn:SetNormalTexture("Interface\\Buttons\\UI-ScrollBar-ScrollUpButton-Up")
         upBtn:SetPushedTexture("Interface\\Buttons\\UI-ScrollBar-ScrollUpButton-Down")
         upBtn:SetHighlightTexture("Interface\\Buttons\\UI-ScrollBar-ScrollUpButton-Highlight")
@@ -229,8 +264,8 @@ function EditModeTS.EditModeMixin:CreateEditMenu(textureName, textureData)
         end)
         
         local downBtn = CreateFrame("Button", nil, parent)
-        downBtn:SetSize(20, 20)
-        downBtn:SetPoint("LEFT", upBtn, "RIGHT", 2, 0)
+        downBtn:SetSize(25, 25)
+        downBtn:SetPoint("TOP", upBtn, "BOTTOM", 0, 10)
         downBtn:SetNormalTexture("Interface\\Buttons\\UI-ScrollBar-ScrollDownButton-Up")
         downBtn:SetPushedTexture("Interface\\Buttons\\UI-ScrollBar-ScrollDownButton-Down")
         downBtn:SetHighlightTexture("Interface\\Buttons\\UI-ScrollBar-ScrollDownButton-Highlight")
@@ -242,14 +277,14 @@ function EditModeTS.EditModeMixin:CreateEditMenu(textureName, textureData)
     end
     
     -- Position Category
-    local positionHeader = Interface:CreateCategoryDivider(menuContent, true)
-    positionHeader:SetText("Position")
-    positionHeader:SetPoint("TOPLEFT", menuContent, "TOPLEFT", 15, -20)
+    local positionSizeHeader = Interface:CreateCategoryDivider(menuContent, true)
+    positionSizeHeader:SetText("Position & Size")
+    positionSizeHeader:SetPoint("TOPLEFT", menuContent, "TOPLEFT", 15, -10)
     
     -- X Position control
     local xPosBox = CreateFrame("EditBox", nil, menuContent, "InputBoxTemplate")
     xPosBox:SetSize(60, 20)
-    xPosBox:SetPoint("TOPLEFT", positionHeader, "BOTTOMLEFT", 10, -40)
+    xPosBox:SetPoint("TOPLEFT", positionSizeHeader, "BOTTOMLEFT", 10, -30)
     xPosBox:SetText(tostring(math.floor(textureData.x or 0)))
     xPosBox:SetAutoFocus(false)
     xPosBox:SetScript("OnEnterPressed", function(self)
@@ -263,6 +298,7 @@ function EditModeTS.EditModeMixin:CreateEditMenu(textureName, textureData)
         end
         self:ClearFocus()
     end)
+    menu.content.xPosBox = xPosBox
     
     local xPosLabel = menuContent:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     xPosLabel:SetText("X:")
@@ -291,7 +327,7 @@ function EditModeTS.EditModeMixin:CreateEditMenu(textureName, textureData)
     -- Y Position control
     local yPosBox = CreateFrame("EditBox", nil, menuContent, "InputBoxTemplate")
     yPosBox:SetSize(60, 20)
-    yPosBox:SetPoint("TOPLEFT", xPosBox, "BOTTOMLEFT", 0, -30)
+    yPosBox:SetPoint("LEFT", xPosBox, "RIGHT", 30, 0)
     yPosBox:SetText(tostring(math.floor(textureData.y or 0)))
     yPosBox:SetAutoFocus(false)
     yPosBox:SetScript("OnEnterPressed", function(self)
@@ -303,6 +339,7 @@ function EditModeTS.EditModeMixin:CreateEditMenu(textureName, textureData)
         end
         self:ClearFocus()
     end)
+    menu.content.yPosBox = yPosBox
     
     local yPosLabel = menuContent:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     yPosLabel:SetText("Y:")
@@ -328,15 +365,10 @@ function EditModeTS.EditModeMixin:CreateEditMenu(textureName, textureData)
         1
     )
     
-    -- Size Category
-    local sizeHeader = Interface:CreateCategoryDivider(menuContent, true)
-    sizeHeader:SetText("Size")
-    sizeHeader:SetPoint("TOPLEFT", yPosBox, "BOTTOMLEFT", -10, -30)
-    
     -- Width control
     local widthBox = CreateFrame("EditBox", nil, menuContent, "InputBoxTemplate")
     widthBox:SetSize(60, 20)
-    widthBox:SetPoint("TOPLEFT", sizeHeader, "BOTTOMLEFT", 10, -40)
+    widthBox:SetPoint("TOPLEFT", xPosBox, "BOTTOMLEFT", 0, -30)
     widthBox:SetText(tostring(textureData.width))
     widthBox:SetAutoFocus(false)
     widthBox:SetScript("OnEnterPressed", function(self)
@@ -367,13 +399,13 @@ function EditModeTS.EditModeMixin:CreateEditMenu(textureName, textureData)
             textureData.width = current
             frame:UpdateSize(current, nil)
         end,
-        5
+        1
     )
     
     -- Height control
     local heightBox = CreateFrame("EditBox", nil, menuContent, "InputBoxTemplate")
     heightBox:SetSize(60, 20)
-    heightBox:SetPoint("LEFT", widthBox, "RIGHT", 20, 0)
+    heightBox:SetPoint("LEFT", widthBox, "RIGHT", 30, 0)
     heightBox:SetText(tostring(textureData.height))
     heightBox:SetAutoFocus(false)
     heightBox:SetScript("OnEnterPressed", function(self)
@@ -404,7 +436,7 @@ function EditModeTS.EditModeMixin:CreateEditMenu(textureName, textureData)
             textureData.height = current
             frame:UpdateSize(nil, current)
         end,
-        5
+        1
     )
 
     -- Rotation slider
@@ -502,7 +534,7 @@ function EditModeTS.EditModeMixin:CreateEditMenu(textureName, textureData)
     -- Action buttons at bottom
     local removeBtn = CreateFrame("Button", nil, menuContent, "UIPanelButtonTemplate")
     removeBtn:SetSize(100, 25)
-    removeBtn:SetPoint("BOTTOMLEFT", menuContent, "BOTTOMLEFT", 10, 20)
+    removeBtn:SetPoint("BOTTOMLEFT", menuContent, "BOTTOMLEFT", 10, 10)
     removeBtn:SetText("Remove")
     removeBtn:SetScript("OnClick", function()
         TextureManager:RemoveTexture(textureName, frame.parentAddon)
@@ -511,7 +543,7 @@ function EditModeTS.EditModeMixin:CreateEditMenu(textureName, textureData)
 
     local lockBtn = CreateFrame("Button", nil, menuContent, "UIPanelButtonTemplate")
     lockBtn:SetSize(100, 25)
-    lockBtn:SetPoint("LEFT", removeBtn, "RIGHT", 10, 0)
+    lockBtn:SetPoint("LEFT", removeBtn, "RIGHT", 5, 0)
     lockBtn:SetText(textureData.locked and "Unlock" or "Lock")
     lockBtn:SetScript("OnClick", function()
         textureData.locked = not textureData.locked
@@ -621,6 +653,16 @@ function EditModeTS.EditModeTextureMixin:UpdatePosition()
     if self.parentAddon.db.profile.textures[self.textureName] then
         self.parentAddon.db.profile.textures[self.textureName].x = relativeX
         self.parentAddon.db.profile.textures[self.textureName].y = relativeY
+    end
+
+    -- Update the edit menu fields if open
+    if self.menu then
+        if self.menu.content.xPosBox then
+            self.menu.content.xPosBox:SetText(tostring(math.floor(relativeX)))
+        end
+        if self.menu.content.yPosBox then
+            self.menu.content.yPosBox:SetText(tostring(math.floor(relativeY)))
+        end
     end
 end
 

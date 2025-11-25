@@ -25,7 +25,7 @@ A World of Warcraft addon that provides an intuitive interface for WoW players t
 
 ### Managing Textures
 
-[Screenshot: Main interface]
+![Screenshot: Texture Manager](.github/assets/ts_texture_manager.png)
 
 Access the TextureSurprise menu through the minimap button or command: `/ts`
 - **Enter Name**: Add the filename of your texture in the text box
@@ -34,16 +34,16 @@ Access the TextureSurprise menu through the minimap button or command: `/ts`
 
 ### Editing Textures
 
-[Screenshot: Edit Mode integration]
+![Screenshot: Edit Mode integration](.github/assets/ts_edit_menu.png)
 
 TextureSurprise integrates with WoW's native Edit Mode, allowing you to:
 - Lock/unlock texture positioning
 - Adjust texture layer order
 - Reset to default positions
 
-### Tutorial Video
+### Gameplay Video
 
-[Add video link or embed here]
+![Video: Basic Gameplay Use](.github/assets/ts_basic_demo_low.gif)
 
 ## Supported Texture Formats
 
