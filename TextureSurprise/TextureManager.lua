@@ -19,12 +19,25 @@ TextureManager.frames = TextureManager.frames or {}
 --- @return: The created window object
 function TextureManager:Create(parentAddon)
     -- Use styled interface if available
-    local window = Interface:CreateStyledWindow("Texture Manager", 300, 175, true)
+    local window = Interface:CreateStyledWindow("Texture Manager", 300, 170, true)
+
+    -- Create the profile area
+    local profileFrame = CreateFrame("Frame", nil, window.content)
+    profileFrame:SetPoint("TOPLEFT", window.content, "TOPLEFT", 0, -32)
+    profileFrame:SetPoint("TOPRIGHT", window.content, "TOPRIGHT", 0, -32)
+    profileFrame:SetHeight(0)  -- Placeholder for future profile functionality
+
+    ProfileManager:Create(profileFrame, parentAddon)
+
+    -- Add divider
+    local profileHeader = Interface:CreateCategoryDivider(profileFrame, true)
+    profileHeader:SetText("")
+    profileHeader:SetPoint("TOPLEFT", profileFrame, "BOTTOMLEFT", 7, 5)
     
     -- Create input area
     local inputFrame = CreateFrame("Frame", nil, window.content)
-    inputFrame:SetPoint("TOPLEFT", window.content, "TOPLEFT", 0, -32)
-    inputFrame:SetPoint("TOPRIGHT", window.content, "TOPRIGHT", 0, -32)
+    inputFrame:SetPoint("TOPLEFT", profileFrame, "BOTTOMLEFT", 0, -5)
+    inputFrame:SetPoint("TOPRIGHT", profileFrame, "BOTTOMRIGHT", 0, -5)
     inputFrame:SetHeight(70)
     
     -- Create instructions
@@ -47,14 +60,14 @@ function TextureManager:Create(parentAddon)
     inputLabel:SetPoint("BOTTOMLEFT", editBox, "TOPLEFT", -2, 2)
 
     -- Add divider
-    local inputHeader = Interface:CreateCategoryDivider(inputFrame, true)
-    inputHeader:SetText("")
-    inputHeader:SetPoint("TOPLEFT", inputFrame, "BOTTOMLEFT", 7, 5)
+    -- local inputHeader = Interface:CreateCategoryDivider(inputFrame, true)
+    -- inputHeader:SetText("")
+    -- inputHeader:SetPoint("TOPLEFT", inputFrame, "BOTTOMLEFT", 7, 5)
     
     -- Create button area
     local buttonFrame = CreateFrame("Frame", nil, window.content)
-    buttonFrame:SetPoint("TOPLEFT", inputFrame, "BOTTOMLEFT", 0, -10)
-    buttonFrame:SetPoint("TOPRIGHT", inputFrame, "BOTTOMRIGHT", 0, -10)
+    buttonFrame:SetPoint("TOPLEFT", inputFrame, "BOTTOMLEFT", 0, -5)
+    buttonFrame:SetPoint("TOPRIGHT", inputFrame, "BOTTOMRIGHT", 0, -5)
     buttonFrame:SetHeight(40)
     
     -- Add buttons
@@ -104,7 +117,7 @@ function TextureManager:Create(parentAddon)
                 inputLabel:SetTextColor(1, 0, 0)
             elseif parentAddon.db.profile.textures[text] == nil then
                 TextureManager:StoreTexture(text, texturePath, 0, 0, 64, 64, parentAddon)
-                TextureManager:ShowTexture(text, parentAddon)
+                TextureManager:AddTexture(text, parentAddon)
                 local source = (texturePath == customPath) and "(custom)" or "(built-in)"
                 inputLabel:SetText("Added: " .. text .. " " .. source)
                 inputLabel:SetTextColor(0, 1, 0)
@@ -187,7 +200,7 @@ end
 --- @param name: Name of the texture to display
 --- @param parentAddon: Reference to the main addon object
 --- @return: None
-function TextureManager:ShowTexture(name, parentAddon)
+function TextureManager:AddTexture(name, parentAddon)
     if not parentAddon.db.profile.textures or not parentAddon.db.profile.textures[name] then
         if parentAddon and parentAddon.Print then
             parentAddon:Print("[Error] Texture not found: " .. (name or "nil"))

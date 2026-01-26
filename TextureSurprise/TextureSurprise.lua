@@ -47,7 +47,7 @@ local ToggleDropDownMenu = ToggleDropDownMenu
 --- @param: None
 --- @return: None
 function TextureSurprise:OnInitialize()
-    -- Initialize database
+    -- Initialize database with proper profile structure
     self.db = AceDB:New("TextureSurpriseDB", {
         profile = {
             minimap = { hide = false },
@@ -58,7 +58,14 @@ function TextureSurprise:OnInitialize()
                 y = 0,
             },
         }
-    }, true)
+    })
+    
+    -- Ensure "Default" profile exists if this is first initialization
+    local profiles = self.db:GetProfiles()
+    if #profiles == 0 then
+        -- No profiles exist, create Default profile
+        self.db:SetProfile("Default")
+    end
     
     -- Register minimap button
     LDBIcon:Register("Texture Surprise", dataBroker, self.db.profile.minimap)
