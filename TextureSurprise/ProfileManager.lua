@@ -253,17 +253,7 @@ end
 --- @param onConfirm: Function to call when confirmed
 --- @return: None
 function ProfileManager:ShowConfirmDialog(title, message, onConfirm)
-    local dialog = CreateFrame("Frame", "TSConfirmDialog", UIParent, "BasicFrameTemplateWithInset")
-    dialog:SetSize(320, 150)
-    dialog:SetPoint("CENTER", UIParent, "CENTER")
-    dialog:SetFrameStrata("DIALOG")
-    dialog:EnableMouse(true)
-    
-    -- Title
-    dialog.TitleBg:SetHeight(40)
-    dialog.title = dialog:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
-    dialog.title:SetPoint("TOPLEFT", dialog.TitleBg, "TOPLEFT", 10, -10)
-    dialog.title:SetText(title)
+    local dialog = Interface:CreateStyledWindow(title, 320, 150, true)
     
     -- Message
     local messageText = dialog:CreateFontString(nil, "OVERLAY", "GameFontNormal")
@@ -275,7 +265,7 @@ function ProfileManager:ShowConfirmDialog(title, message, onConfirm)
     
     -- Yes button
     local yesBtn = CreateFrame("Button", nil, dialog, "UIPanelButtonTemplate")
-    yesBtn:SetWidth(80)
+    yesBtn:SetWidth(60)
     yesBtn:SetHeight(25)
     yesBtn:SetPoint("BOTTOMRIGHT", dialog, "BOTTOMRIGHT", -10, 10)
     yesBtn:SetText("Yes")
@@ -286,7 +276,7 @@ function ProfileManager:ShowConfirmDialog(title, message, onConfirm)
     
     -- No button
     local noBtn = CreateFrame("Button", nil, dialog, "UIPanelButtonTemplate")
-    noBtn:SetWidth(80)
+    noBtn:SetWidth(60)
     noBtn:SetHeight(25)
     noBtn:SetPoint("RIGHT", yesBtn, "LEFT", -5, 0)
     noBtn:SetText("No")
