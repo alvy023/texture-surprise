@@ -30,18 +30,18 @@ function ProfileManager:Create(parentFrame, parentAddon)
     -- Constants for consistent sizing
     local LABEL_WIDTH = 165
     local DROPDOWN_WIDTH = 140
-    local INPUT_WIDTH = 100
+    local INPUT_WIDTH = 150
     local BUTTON_WIDTH = 60
     local ROW_HEIGHT = 30
     local LEFT_MARGIN = 10
     
     -- Profile section header
     local header = Interface:CreateCategoryDivider(profileSection, true)
-    header:SetText("Profile")
+    header:SetText("Manage Profiles")
     header:SetPoint("TOPLEFT", profileSection, "TOPLEFT", 15, -5)
     
     -- Row 1: Current Profile Selector
-    local row1Y = -35
+    local row1Y = -43
     
     local currentLabel = profileSection:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     currentLabel:SetPoint("TOPLEFT", profileSection, "TOPLEFT", LEFT_MARGIN, row1Y)
@@ -140,13 +140,13 @@ function ProfileManager:Create(parentFrame, parentAddon)
     
     local newEditBox = CreateFrame("EditBox", nil, profileSection, "InputBoxTemplate")
     newEditBox:SetSize(INPUT_WIDTH, 20)
-    newEditBox:SetPoint("LEFT", newLabel, "RIGHT", 5, 0)
+    newEditBox:SetPoint("LEFT", newLabel, "RIGHT", 8, 0)
     newEditBox:SetAutoFocus(false)
-    newEditBox:SetMaxLetters(48)
+    newEditBox:SetMaxLetters(64)
     
     local addBtn = CreateFrame("Button", nil, profileSection, "UIPanelButtonTemplate")
     addBtn:SetSize(BUTTON_WIDTH, 22)
-    addBtn:SetPoint("LEFT", newEditBox, "RIGHT", 5, 0)
+    addBtn:SetPoint("LEFT", newEditBox, "RIGHT", 7, 0)
     addBtn:SetText("Add")
     addBtn:SetScript("OnClick", function()
         local profileName = newEditBox:GetText()
@@ -300,7 +300,7 @@ end
 --- Description: Refreshes textures when switching profiles
 --- @param parentAddon: Reference to the main addon object
 --- @return: None
-local function RefreshTexturesForProfile(parentAddon)
+function ProfileManager:RefreshTexturesForProfile(parentAddon)
     local db = parentAddon.db
     
     -- Hide all currently displayed textures
@@ -317,7 +317,7 @@ local function RefreshTexturesForProfile(parentAddon)
     -- Show textures from the new profile
     if db.profile.textures then
         for name, _ in pairs(db.profile.textures) do
-            TextureManager:ShowTexture(name, parentAddon)
+            TextureManager:AddTexture(name, parentAddon)
         end
     end
 end

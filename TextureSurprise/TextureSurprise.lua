@@ -97,7 +97,7 @@ function TextureSurprise:InitializeTexturesAndManager()
     -- Show all saved textures
     if self.db and self.db.profile and self.db.profile.textures then
         for name, _ in pairs(self.db.profile.textures) do
-            TextureManager:ShowTexture(name, self)
+            TextureManager:AddTexture(name, self)
         end
     end
 end

@@ -116,7 +116,7 @@ function Interface:CreateCategoryDivider(parent, alignCenter)
 
     local divider = parent:CreateTexture(nil, "OVERLAY")
     divider:SetHeight(4)
-    divider:SetPoint("TOPLEFT", fontString, "BOTTOMLEFT", -7, -4)
+    divider:SetPoint("TOPLEFT", fontString, "BOTTOMLEFT", -7, -8)
     divider:SetPoint("RIGHT", parent, "RIGHT", -8, 0)
     divider:SetTexture(ASSET_PATH .. "PlumberDividerHorizontal.tga")
     divider:SetVertexColor(0.5, 0.5, 0.5)
