@@ -20,5 +20,6 @@ libs/Ace3/AceGUI-3.0/AceGUI-3.0.xml
 # Core Addon Files
 Interface.lua
 EditMode.lua
+ProfileManager.lua
 TextureManager.lua
 TextureSurprise.lua
