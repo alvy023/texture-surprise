@@ -112,7 +112,7 @@ function TextureManager:Create(parentAddon)
             testTexture:Hide()
             
             if not texturePath then
-                resultLabel:SetText("Error: Couldn't find file in either directory!")
+                resultLabel:SetText("Error: Couldn't find file in either directory! Try /reload")
                 resultLabel:SetTextColor(1, 0, 0)
             elseif parentAddon.db.profile.textures[texture] == nil then
                 TextureManager:StoreTexture(texture, texturePath, 0, 0, 64, 64, parentAddon)
