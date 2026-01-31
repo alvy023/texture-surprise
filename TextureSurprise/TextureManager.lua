@@ -31,7 +31,7 @@ function TextureManager:Create(parentAddon)
 
     -- Add divider
     local profileHeader = Interface:CreateCategoryDivider(profileFrame, true)
-    profileHeader:SetText("Manage  Textures in Profile")
+    profileHeader:SetText("Manage Textures in Profile")
     profileHeader:SetPoint("TOPLEFT", profileFrame, "BOTTOMLEFT", 15, -28)
     
     -- Create input area
