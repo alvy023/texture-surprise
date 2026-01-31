@@ -14,7 +14,6 @@ ProfileManager = {}
 --- - A button to create new profiles (opens dialog)
 --- - A button to copy the current profile to a new name
 --- - A button to delete the current profile (if not the last one)
---- - A button to reset the current profile to default settings
 --- @param parentFrame: Parent frame to attach the profile section to
 --- @param parentAddon: Reference to the main addon object
 --- @return: The created profile section frame
