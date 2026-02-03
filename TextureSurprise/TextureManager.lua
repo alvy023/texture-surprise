@@ -135,7 +135,7 @@ function TextureManager:Create(parentAddon)
         if type(texture) == "string" and texture ~= "" then
             local removed = TextureManager:RemoveTexture(texture, parentAddon)
             if removed then
-                resultLabel:SetText("Successfully removed texture")
+                resultLabel:SetText("Successfully deleted texture")
                 resultLabel:SetTextColor(0, 1, 0)
                 textureEditBox:SetText("")
             else
