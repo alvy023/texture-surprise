@@ -13,7 +13,7 @@ ProfileManager = {}
 --- - A dropdown to select/switch between existing profiles
 --- - An input field and button to create new profiles
 --- - A dropdown and button to copy settings from another profile to the current profile
---- - A button to delete the current profile (if not the last one)
+--- - A dropdown and button to delete other profiles (cannot delete the current or last profile)
 --- @param parentFrame: Parent frame to attach the profile section to
 --- @param parentAddon: Reference to the main addon object
 --- @return: The created profile section frame
