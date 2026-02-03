@@ -11,7 +11,7 @@ ProfileManager = {}
 --- Description: Creates a profile management section within the texture manager window
 --- This function creates UI elements for managing addon profiles including:
 --- - A dropdown to select/switch between existing profiles
---- - A button to create new profiles (opens dialog)
+--- - An input field and button to create new profiles
 --- - A button to copy the current profile to a new name
 --- - A button to delete the current profile (if not the last one)
 --- @param parentFrame: Parent frame to attach the profile section to
