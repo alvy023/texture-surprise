@@ -21,5 +21,6 @@ libs/Ace3/AceGUI-3.0/AceGUI-3.0.xml
 Interface.lua
 EditMode.lua
 ProfileManager.lua
+GroupManager.lua
 TextureManager.lua
 TextureSurprise.lua

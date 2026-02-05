@@ -81,8 +81,14 @@ function TextureManager:Create(parentAddon)
     -- Edit Mode button
     local editModeButton = CreateFrame("Button", nil, textureFrame, "UIPanelButtonTemplate")
     editModeButton:SetSize(100, 25)
-    editModeButton:SetPoint("BOTTOM", textureFrame, "BOTTOM", 0, -60)
+    editModeButton:SetPoint("BOTTOMLEFT", textureFrame, "BOTTOM", -105, -60)
     editModeButton:SetText("Edit Mode")
+    
+    -- Group Manager button
+    local groupManagerButton = CreateFrame("Button", nil, textureFrame, "UIPanelButtonTemplate")
+    groupManagerButton:SetSize(100, 25)
+    groupManagerButton:SetPoint("BOTTOMRIGHT", textureFrame, "BOTTOM", 105, -60)
+    groupManagerButton:SetText("Group Manager")
     
     -- Button functionality
     textureEditBox:SetScript("OnEnterPressed", function(self)
@@ -155,6 +161,10 @@ function TextureManager:Create(parentAddon)
         else
             parentAddon:Print("[Error] Edit Mode Manager not available!")
         end
+    end)
+    
+    groupManagerButton:SetScript("OnClick", function()
+        parentAddon:ShowGroupManager()
     end)
     
     -- Reset input label on close

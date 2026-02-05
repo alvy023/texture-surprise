@@ -15,6 +15,7 @@ local LDBIcon = LibStub("LibDBIcon-1.0")
 -- Initialize TS as AceAddon module
 TextureSurprise = AceAddon:NewAddon("TextureSurprise", "AceConsole-3.0", "AceEvent-3.0")
 local textureManagerWindow = nil
+local groupManagerWindow = nil
 
 -- Initialize minimap button
 local dataBroker = LDB:NewDataObject("TextureSurprise", {
@@ -53,6 +54,7 @@ function TextureSurprise:OnInitialize()
             minimap = { hide = false },
             addonCompartment = { hide = false },
             textures = {},
+            groups = {},
             editMenuPosition = {
                 x = 0,
                 y = 0,
@@ -89,7 +91,7 @@ end
 --- Description: Common initialization handler for login and updates
 --- @param: None
 --- @return: None
-function TextureSurprise:InitializeTexturesAndManager()
+function TextureSurprise:InitializeTexturesAndManagers()
     if textureManagerWindow == nil then
         TextureSurprise:CreateTextureManager()
         textureManagerWindow:Hide()
@@ -100,27 +102,31 @@ function TextureSurprise:InitializeTexturesAndManager()
             TextureManager:AddTexture(name, self)
         end
     end
+    -- Initialize all group frames
+    if self.db and self.db.profile and self.db.profile.groups then
+        GroupManager:InitializeGroups(self)
+    end
 end
 
 --- Description: PLAYER_LOGIN event handler
 --- @param: None
 --- @return: None
 function TextureSurprise:PLAYER_LOGIN()
-    self:InitializeTexturesAndManager()
+    self:InitializeTexturesAndManagers()
 end
 
 --- Description: Player reload event handler
 --- @param: None
 --- @return: None
 function TextureSurprise:PLAYER_ENTERING_WORLD()
-    self:InitializeTexturesAndManager()
+    self:InitializeTexturesAndManagers()
 end
 
 --- Description: Edit mode layouts updated event handler
 --- @param: None
 --- @return: None
 function TextureSurprise:EDIT_MODE_LAYOUTS_UPDATED()
-    self:InitializeTexturesAndManager()
+    self:InitializeTexturesAndManagers()
 end
 
 -- Functions
@@ -163,6 +169,33 @@ function TextureSurprise:ShowTextureManager()
         return
     end
     textureManagerWindow:Show()
+end
+
+-- Description: Create the group manager
+--- @param: None
+--- @return: None
+function TextureSurprise:CreateGroupManager()
+    if groupManagerWindow == nil then
+        groupManagerWindow = GroupManager:Create(self)
+        groupManagerWindow:Hide()
+    end
+end
+
+--- Description: Show the group manager
+--- @param: None
+--- @return: None
+function TextureSurprise:ShowGroupManager()
+    if groupManagerWindow == nil then
+        self:CreateGroupManager()
+    end
+    if groupManagerWindow == nil then
+        self:Print("[ERROR] Unable to open group manager!")
+        return
+    end
+    if EditModeManagerFrame and EditModeManagerFrame:IsShown() then
+        return
+    end
+    groupManagerWindow:Show()
 end
 
 --- Description: Show the options menu
