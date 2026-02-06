@@ -19,7 +19,7 @@ GroupManager.groupFrames = GroupManager.groupFrames or {}
 --- @return: The created window object
 function GroupManager:Create(parentAddon)
     -- Use styled interface if available
-    local window = Interface:CreateStyledWindow("Group Management", 408, 520, true)
+    local window = Interface:CreateStyledWindow("Texture Group Manager", 408, 520, true)
 
     -- Create the manage groups area
     local manageGroupsFrame = CreateFrame("Frame", nil, window.content)
@@ -493,8 +493,8 @@ function GroupManager:CreateGroupFrame(groupName, parentAddon)
         return
     end
 
-    -- Create the group frame
-    local frame = CreateFrame("Frame", "TextureSurpriseGroupFrame_"..groupName, UIParent, "EditModeSystemTemplate")
+    -- Create the group frame (no longer using EditModeSystemTemplate as we handle it ourselves)
+    local frame = CreateFrame("Frame", "TextureSurpriseGroupFrame_"..groupName, UIParent)
     
     -- Calculate bounding box for all textures in group
     local minX, maxX, minY, maxY = math.huge, -math.huge, math.huge, -math.huge
@@ -518,9 +518,6 @@ function GroupManager:CreateGroupFrame(groupName, parentAddon)
     
     frame:SetSize(math.max(64, width), math.max(64, height))
     frame:SetPoint("CENTER", UIParent, "CENTER", group.x, group.y)
-    frame:SetAlpha(0.3) -- Semi-transparent to see contained textures
-    frame:SetFrameStrata(group.strata)
-    frame:SetFrameLevel(group.level)
 
     -- Reparent textures to group frame
     for _, textureName in ipairs(group.textures) do
@@ -533,10 +530,12 @@ function GroupManager:CreateGroupFrame(groupName, parentAddon)
         end
     end
 
-    -- TODO: Setup edit mode functionality for group frame
-    -- This will be similar to EnableTextureFrameEditMode but for groups
+    -- Setup edit mode functionality for group frame
+    EditModeTS:EnableGroupFrameEditMode(frame, parentAddon, groupName)
     
-    frame:Show()
+    -- Set initial visibility
+    frame:SetShown(group.visible ~= false)
+    
     self.groupFrames[groupName] = frame
 
     return frame

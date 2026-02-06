@@ -710,8 +710,6 @@ function EditModeTS.EditModeTextureMixin:ShowEditMenu()
     end
 end
 
--- Edit Mode Functions
-
 --- Description: Sets up edit mode functionality for a texture frame
 --- @param frame: The texture frame to set up
 --- @param parentAddon: Reference to the main addon object
@@ -741,6 +739,372 @@ function EditModeTS:EnableTextureFrameEditMode(frame, parentAddon, textureName)
         end
     end)
     frame:RegisterEvent("GLOBAL_MOUSE_DOWN")
+    frame:SetScript("OnEvent", function(self, event)
+        if event == "GLOBAL_MOUSE_DOWN" and self.editModeActive and self.isSelected then
+            -- Check if the mouse is over the edit menu before deselecting
+            if self.menu and self.menu:IsShown() then
+                local mouseX, mouseY = GetCursorPosition()
+                local scale = self.menu:GetEffectiveScale()
+                mouseX = mouseX / scale
+                mouseY = mouseY / scale
+                
+                -- Get menu bounds
+                local left = self.menu:GetLeft()
+                local right = self.menu:GetRight()
+                local top = self.menu:GetTop()
+                local bottom = self.menu:GetBottom()
+                
+                -- If mouse is inside the menu bounds, don't deselect
+                if mouseX >= left and mouseX <= right and mouseY >= bottom and mouseY <= top then
+                    return -- Don't deselect, click is inside menu
+                end
+            end
+            
+            -- Mouse is outside menu (or menu not shown), deselect
+            self:HideSelection()
+        end
+    end)
+
+    EventRegistry:RegisterCallback("EditMode.Enter", frame.OnEditModeEnter, frame)
+    EventRegistry:RegisterCallback("EditMode.Exit", frame.OnEditModeExit, frame)
+end
+
+--- EditModeGroupMixin - Extends EditModeMixin for group frames
+EditModeTS.EditModeGroupMixin = {}
+for k, v in pairs(EditModeTS.EditModeMixin) do
+    EditModeTS.EditModeGroupMixin[k] = v
+end
+
+--- Description: Handles the start of dragging the group frame
+--- @param None
+--- @return: None
+function EditModeTS.EditModeGroupMixin:OnDragStart()
+    if not self.locked and self.editModeActive then
+        self:StartMoving()
+    end
+end
+
+--- Description: Handles the stop of dragging the group frame
+--- @param None
+--- @return: None
+function EditModeTS.EditModeGroupMixin:OnDragStop()
+    if not self.locked and self.editModeActive then
+        self:StopMovingOrSizing()
+        self:UpdateGroupPosition()
+    end
+end
+
+--- Description: Shows the highlight overlay when hovering (group-specific override)
+--- @param None
+--- @return: None
+function EditModeTS.EditModeGroupMixin:ShowHighlighted()
+    if not self:IsShown() then return end
+    self:SetHighlighted(true)
+end
+
+--- Description: Shows the selection overlay and opens the edit menu (group-specific override)
+--- @param None
+--- @return: None
+function EditModeTS.EditModeGroupMixin:ShowSelected()
+    if not self:IsShown() then return end
+    self:SetSelected(true)
+    self:ShowGroupEditMenu()
+end
+
+--- Description: Hides the selection overlay and closes the edit menu
+--- @param None
+--- @return: None
+function EditModeTS.EditModeGroupMixin:HideSelection()
+    self:SetSelected(false)
+    if EditModeManagerFrame and EditModeManagerFrame:IsShown() then
+        self:SetHighlighted(true)
+    else
+        self:SetHighlighted(false)
+    end
+    if self.menu then
+        self.menu:Hide()
+    end
+end
+
+--- Description: Enters edit mode for group frames (extends base functionality)
+--- @param None
+--- @return: None
+function EditModeTS.EditModeGroupMixin:OnEditModeEnter()
+    -- Call parent method
+    EditModeTS.EditModeMixin.OnEditModeEnter(self)
+
+    -- Add group-specific functionality
+    self:SetMovable(not self.locked)
+    self:RegisterForDrag("LeftButton")
+    
+    -- Make child textures non-interactive in edit mode
+    self:SetChildTexturesInteractable(false)
+end
+
+--- Description: Exits edit mode for group frames (extends base functionality)
+--- @param None
+--- @return: None
+function EditModeTS.EditModeGroupMixin:OnEditModeExit()
+    -- Add group-specific cleanup first
+    self:SetMovable(false)
+    self:RegisterForDrag()
+    if self.menu then
+        self.menu:Hide()
+    end
+    
+    -- Restore child texture interactability
+    self:SetChildTexturesInteractable(true)
+    
+    -- Call parent method
+    EditModeTS.EditModeMixin.OnEditModeExit(self)
+end
+
+--- Description: Sets whether child textures can be interacted with
+--- @param interactable: Boolean indicating if textures should be interactable
+--- @return: None
+function EditModeTS.EditModeGroupMixin:SetChildTexturesInteractable(interactable)
+    if not self.groupName or not self.parentAddon then return end
+    
+    local group = self.parentAddon.db.profile.groups[self.groupName]
+    if not group then return end
+    
+    for _, textureName in ipairs(group.textures) do
+        local textureFrame = TextureManager.frames[textureName]
+        if textureFrame then
+            textureFrame:EnableMouse(interactable)
+        end
+    end
+end
+
+--- Description: Updates the group's position in the database after dragging
+--- @param None
+--- @return: None
+function EditModeTS.EditModeGroupMixin:UpdateGroupPosition()
+    local frameX, frameY = self:GetCenter()
+    local screenWidth, screenHeight = UIParent:GetSize()
+    local centerX, centerY = screenWidth / 2, screenHeight / 2
+    local relativeX = frameX - centerX
+    local relativeY = frameY - centerY
+    
+    -- Update database through GroupManager
+    GroupManager:UpdateGroupPosition(self.groupName, relativeX, relativeY, self.parentAddon)
+end
+
+--- Description: Creates the edit menu for a group
+--- @param None
+--- @return: The created menu frame or nil
+function EditModeTS.EditModeGroupMixin:ShowGroupEditMenu()
+    if self.menu then
+        self.menu:Show()
+        return
+    end
+    
+    local groupData = self.parentAddon.db.profile.groups[self.groupName]
+    if not groupData then return end
+    
+    -- Create the menu using styled interface
+    self.menu = Interface:CreateStyledWindow("Edit Group: " .. self.groupName, 225, 350, true)
+    local menu = self.menu
+    local frame = self
+    
+    -- Setup menu properties
+    menu.groupName = self.groupName
+    menu.groupData = groupData
+    menu.sourceFrame = frame
+    menu:SetFrameStrata("TOOLTIP")
+    
+    -- Initialize editMenuPosition if it doesn't exist
+    if frame.parentAddon and frame.parentAddon.db and frame.parentAddon.db.profile then
+        if not frame.parentAddon.db.profile.editMenuPosition then
+            frame.parentAddon.db.profile.editMenuPosition = {x = 0, y = 0}
+        end
+        
+        local centerX, centerY = UIParent:GetWidth() / 2, UIParent:GetHeight() / 2
+        menu:SetPoint("CENTER", UIParent, "CENTER", 
+            frame.parentAddon.db.profile.editMenuPosition.x, 
+            frame.parentAddon.db.profile.editMenuPosition.y)
+        
+        menu:SetScript("OnDragStop", function()
+            menu:StopMovingOrSizing()
+            if frame and frame.parentAddon and frame.parentAddon.db and frame.parentAddon.db.profile then
+                local x, y = menu:GetCenter()
+                local screenWidth, screenHeight = UIParent:GetSize()
+                local centerX, centerY = screenWidth / 2, screenHeight / 2
+                frame.parentAddon.db.profile.editMenuPosition.x = x - centerX
+                frame.parentAddon.db.profile.editMenuPosition.y = y - centerY
+            end
+        end)
+    end
+    
+    menu:SetScript("OnHide", function()
+        if frame then
+            frame.menu = nil
+        end
+    end)
+    
+    -- Create content area for controls
+    local menuContent = CreateFrame("Frame", nil, menu.content)
+    menuContent:SetPoint("TOPLEFT", menu.content, "TOPLEFT", 0, -5)
+    menuContent:SetPoint("BOTTOMRIGHT", menu.content, "BOTTOMRIGHT", 0, 2)
+    
+    -- Position & Size Category
+    local positionSizeHeader = Interface:CreateCategoryDivider(menuContent, true)
+    positionSizeHeader:SetText("Position")
+    positionSizeHeader:SetPoint("TOPLEFT", menuContent, "TOPLEFT", 15, -10)
+    
+    -- X Position control
+    local xPosBox = CreateFrame("EditBox", nil, menuContent, "InputBoxTemplate")
+    xPosBox:SetSize(60, 20)
+    xPosBox:SetPoint("TOPLEFT", positionSizeHeader, "BOTTOMLEFT", 10, -30)
+    xPosBox:SetText(tostring(math.floor(groupData.x or 0)))
+    xPosBox:SetAutoFocus(false)
+    xPosBox:SetScript("OnEnterPressed", function(self)
+        local value = tonumber(self:GetText())
+        if value then
+            groupData.x = value
+            frame:ClearAllPoints()
+            frame:SetPoint("CENTER", UIParent, "CENTER", value, groupData.y or 0)
+            GroupManager:UpdateGroupPosition(frame.groupName, value, groupData.y or 0, frame.parentAddon)
+        end
+        self:ClearFocus()
+    end)
+    
+    local xPosLabel = menuContent:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    xPosLabel:SetText("X:")
+    xPosLabel:SetPoint("BOTTOMLEFT", xPosBox, "TOPLEFT", -4, 2)
+    
+    -- Y Position control
+    local yPosBox = CreateFrame("EditBox", nil, menuContent, "InputBoxTemplate")
+    yPosBox:SetSize(60, 20)
+    yPosBox:SetPoint("LEFT", xPosBox, "RIGHT", 30, 0)
+    yPosBox:SetText(tostring(math.floor(groupData.y or 0)))
+    yPosBox:SetAutoFocus(false)
+    yPosBox:SetScript("OnEnterPressed", function(self)
+        local value = tonumber(self:GetText())
+        if value then
+            groupData.y = value
+            frame:ClearAllPoints()
+            frame:SetPoint("CENTER", UIParent, "CENTER", groupData.x or 0, value)
+            GroupManager:UpdateGroupPosition(frame.groupName, groupData.x or 0, value, frame.parentAddon)
+        end
+        self:ClearFocus()
+    end)
+    
+    local yPosLabel = menuContent:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    yPosLabel:SetText("Y:")
+    yPosLabel:SetPoint("BOTTOMLEFT", yPosBox, "TOPLEFT", -4, 2)
+    
+    -- Group Members Category
+    local membersHeader = Interface:CreateCategoryDivider(menuContent, true)
+    membersHeader:SetText("Members")
+    membersHeader:SetPoint("TOPLEFT", xPosBox, "BOTTOMLEFT", -10, -24)
+    
+    local membersLabel = menuContent:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    membersLabel:SetPoint("TOPLEFT", membersHeader, "BOTTOMLEFT", 10, -10)
+    membersLabel:SetText(string.format("%d texture(s)", #groupData.textures))
+    
+    -- List member names
+    local membersList = menuContent:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    membersList:SetPoint("TOPLEFT", membersLabel, "BOTTOMLEFT", 0, -5)
+    membersList:SetPoint("RIGHT", menuContent, "RIGHT", -15, 0)
+    membersList:SetJustifyH("LEFT")
+    membersList:SetJustifyV("TOP")
+    
+    local memberText = ""
+    for i, textureName in ipairs(groupData.textures) do
+        memberText = memberText .. "• " .. textureName
+        if i < #groupData.textures then
+            memberText = memberText .. "\n"
+        end
+    end
+    membersList:SetText(memberText)
+    
+    -- Appearance Category
+    local appearanceHeader = Interface:CreateCategoryDivider(menuContent, true)
+    appearanceHeader:SetText("Appearance")
+    appearanceHeader:SetPoint("TOPLEFT", membersList, "BOTTOMLEFT", -10, -20)
+    
+    -- Visibility checkbox
+    local visibilityCheck = CreateFrame("CheckButton", nil, menuContent, "UICheckButtonTemplate")
+    visibilityCheck:SetSize(24, 24)
+    visibilityCheck:SetPoint("TOPLEFT", appearanceHeader, "BOTTOMLEFT", 10, -10)
+    visibilityCheck:SetChecked(groupData.visible ~= false)
+    visibilityCheck:SetScript("OnClick", function(self)
+        groupData.visible = self:GetChecked()
+        frame:SetShown(groupData.visible)
+    end)
+    
+    local visibilityLabel = menuContent:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    visibilityLabel:SetText("Visible")
+    visibilityLabel:SetPoint("LEFT", visibilityCheck, "RIGHT", 5, 0)
+    
+    -- Action buttons at bottom
+    local lockBtn = CreateFrame("Button", nil, menuContent, "UIPanelButtonTemplate")
+    lockBtn:SetSize(100, 25)
+    lockBtn:SetPoint("BOTTOMLEFT", menuContent, "BOTTOMLEFT", 10, 10)
+    lockBtn:SetText(groupData.locked and "Unlock" or "Lock")
+    lockBtn:SetScript("OnClick", function()
+        groupData.locked = not groupData.locked
+        frame.locked = groupData.locked
+        frame:SetMovable(not groupData.locked and frame.editModeActive)
+        lockBtn:SetText(groupData.locked and "Unlock" or "Lock")
+    end)
+    
+    local ungroupBtn = CreateFrame("Button", nil, menuContent, "UIPanelButtonTemplate")
+    ungroupBtn:SetSize(100, 25)
+    ungroupBtn:SetPoint("LEFT", lockBtn, "RIGHT", 5, 0)
+    ungroupBtn:SetText("Ungroup")
+    ungroupBtn:SetScript("OnClick", function()
+        -- Confirm ungroup
+        StaticPopupDialogs["TEXTURESURPRISE_UNGROUP_CONFIRM"] = {
+            text = "Ungroup all textures in '" .. frame.groupName .. "'?",
+            button1 = "Yes",
+            button2 = "No",
+            OnAccept = function()
+                GroupManager:DeleteGroup(frame.groupName, frame.parentAddon)
+                menu:Hide()
+            end,
+            timeout = 0,
+            whileDead = true,
+            hideOnEscape = true,
+        }
+        StaticPopup_Show("TEXTURESURPRISE_UNGROUP_CONFIRM")
+    end)
+    
+    menu:Show()
+    return menu
+end
+
+--- Description: Sets up edit mode functionality for a group frame
+--- @param frame: The group frame to set up
+--- @param parentAddon: Reference to the main addon object
+--- @param groupName: Name of the group
+--- @return: None
+function EditModeTS:EnableGroupFrameEditMode(frame, parentAddon, groupName)
+    -- Apply the EditModeGroupMixin (which inherits from EditModeMixin)
+    Mixin(frame, self.EditModeGroupMixin)
+    
+    -- Set frame properties
+    frame.parentAddon = parentAddon
+    frame.groupName = groupName
+    frame.systemName = "TextureSurprise_Group_" .. groupName
+    
+    local groupData = parentAddon.db.profile.groups[groupName]
+    frame.locked = groupData and groupData.locked or false
+    
+    -- Initialize the edit mode functionality
+    frame:InitializeEditMode()
+
+    -- Set up event handlers
+    frame:SetScript("OnDragStart", frame.OnDragStart)
+    frame:SetScript("OnDragStop", frame.OnDragStop)
+    frame:SetScript("OnMouseDown", function(self, button)
+        if self.editModeActive and button == "LeftButton" then
+            self:ShowSelected()
+        end
+    end)
+    frame:RegisterEvent("GLOBAL_MOUSE_DOWN")
+    
     frame:SetScript("OnEvent", function(self, event)
         if event == "GLOBAL_MOUSE_DOWN" and self.editModeActive and self.isSelected then
             -- Check if the mouse is over the edit menu before deselecting
