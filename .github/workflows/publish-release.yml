@@ -1,0 +1,144 @@
+name: Publish Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      patch_version:
+        description: 'Patch version (e.g., 12.0.0)'
+        required: true
+        default: '12.0.1'
+        type: string
+      upload_curseforge:
+        description: 'Upload to CurseForge?'
+        required: false
+        default: true
+        type: boolean
+      upload_wago:
+        description: 'Upload to Wago.io?'
+        required: false
+        default: true
+        type: boolean
+
+jobs:
+  publish:
+    name: Publish Addon to CurseForge and Wago.io
+    runs-on: ubuntu-latest
+
+    env:
+      ADDON_NAME: TextureSurprise
+
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          submodules: recursive
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: 3.x
+
+      - name: Download latest release items from GitHub Releases
+        id: get_release_items
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          release_asset_name=$(gh release view --json assets --jq ".assets[].name")
+          if [ -z "$release_asset_name" ]; then
+            echo "No release asset found in latest release."
+            exit 1
+          fi
+          gh release download --pattern "$release_asset_name" --dir dist
+          gh release view --json body --jq ".body" > RELEASE_NOTES.md
+          echo "release_asset_name=${release_asset_name}" >> $GITHUB_OUTPUT
+
+      # CURSEFORGE DATA PREP
+      - name: Format data for CurseForge
+        id: format_cf_data
+        if: ${{ github.event.inputs.upload_curseforge == 'true' }}
+        env:
+          CURSEFORGE_API_TOKEN: ${{ secrets.CURSEFORGE_API_TOKEN }}
+        run: |
+          PATCH_VERSION=${{ github.event.inputs.patch_version }}
+          echo "PATCH_VERSION: $PATCH_VERSION"
+          GAME_VERSION_ID=$(curl -s -H "x-api-token: ${CURSEFORGE_API_TOKEN}" "https://wow.curseforge.com/api/game/versions" \
+            | jq ".[] | select(.name==\"$PATCH_VERSION\") | .id" | head -n1)
+          if [ -z "$GAME_VERSION_ID" ]; then
+            echo "Could not find CurseForge game version ID for $PATCH_VERSION"
+            exit 1
+          fi
+          echo "GAME_VERSION_ID: $GAME_VERSION_ID"
+          echo "game_version_id=${GAME_VERSION_ID}" >> $GITHUB_OUTPUT
+
+          RELEASE_FILENAME="${{ steps.get_release_items.outputs.release_asset_name }}"
+          DISPLAY_NAME=$(echo "$RELEASE_FILENAME" | sed -e 's/\.zip$//')
+          echo "DISPLAY_NAME: $DISPLAY_NAME"
+          echo "display_name=${DISPLAY_NAME}" >> $GITHUB_OUTPUT
+
+          CHANGELOG=$(python3 .github/scripts/stringify_markdown.py "RELEASE_NOTES.md")
+          echo "CHANGELOG: $CHANGELOG"
+          
+          # Properly encode multiline content for GitHub Actions output
+          {
+            echo "changelog<<EOF"
+            echo "$CHANGELOG"
+            echo "EOF"
+          } >> $GITHUB_OUTPUT
+
+      # CURSEFORGE UPLOAD (meow Action)
+      - name: Upload to CurseForge
+        if: ${{ github.event.inputs.upload_curseforge == 'true' }}
+        uses: itsmeow/curseforge-upload@v3
+        with:
+          token: ${{ secrets.CURSEFORGE_API_TOKEN }}
+          project_id: ${{ secrets.CURSEFORGE_ADDON_ID }}
+          game_endpoint: "wow"
+          file_path: "dist/${{ steps.get_release_items.outputs.release_asset_name }}"
+          game_versions: "${{ steps.format_cf_data.outputs.game_version_id }}"
+          release_type: "release"
+          display_name: ${{ steps.format_cf_data.outputs.display_name }}
+          changelog: ${{ steps.format_cf_data.outputs.changelog }}
+          changelog_type: "markdown"
+
+      # WAGO.IO UPLOAD (custom curl request)
+      - name: Upload to Wago.io (Wago API)
+        if: ${{ github.event.inputs.upload_wago == 'true' }}
+        env:
+          WAGO_API_TOKEN: ${{ secrets.WAGO_API_TOKEN }}
+          WAGO_ADDON_ID: ${{ secrets.WAGO_ADDON_ID }}
+        run: |
+          # Prepare metadata
+          RELEASE_FILENAME="${{ steps.get_release_items.outputs.release_asset_name }}"
+          ## Remove prefix and suffix
+          RELEASE_LABEL=$(echo "$RELEASE_FILENAME" | sed -e 's/^TextureSurprise-//' -e 's/\.zip$//')
+          CHANGELOG=$(cat RELEASE_NOTES.md)
+          SUPPORTED_RETAIL_PATCH=${{ github.event.inputs.patch_version }}
+          
+          echo "RELEASE_LABEL: $RELEASE_LABEL"
+          echo "SUPPORTED_RETAIL_PATCH: $SUPPORTED_RETAIL_PATCH"
+          echo "CHANGELOG: $CHANGELOG"
+          ls -l dist/
+          
+          METADATA=$(jq -n \
+            --arg label "$RELEASE_LABEL" \
+            --arg stability "stable" \
+            --arg changelog "$CHANGELOG" \
+            --arg patch "$SUPPORTED_RETAIL_PATCH" \
+            '{label: $label, stability: $stability, changelog: $changelog, supported_retail_patch: $patch}')
+          echo "METADATA: $METADATA"
+          
+          # Build and send the curl request
+          response=$(curl -f -X POST \
+            -F "metadata=$METADATA" \
+            -F "file=@dist/$RELEASE_FILENAME" \
+            -H "authorization: Bearer $WAGO_API_TOKEN" \
+            -H "accept: application/json" \
+            "https://addons.wago.io/api/projects/$WAGO_ADDON_ID/version")
+
+          # Check for an error in the response
+          if echo "$response" | jq -e '.error, .errorMessage' > /dev/null; then
+            echo "[ERROR] Wago.io:"
+            echo "$response" | jq '.'
+            exit 1
+          fi
