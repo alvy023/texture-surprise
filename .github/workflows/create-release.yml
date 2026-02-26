@@ -65,11 +65,7 @@ jobs:
       - name: Create Package
         run: |
           mkdir -p release
-          cd TextureSurprise
-          zip -r ../release/TextureSurprise-${{ steps.get_version.outputs.version }}.zip . \
-            -x "*.git*" \
-            -x "*/.git/*" \
-            -x "*/.*"
+          zip -r release/TextureSurprise-${{ steps.get_version.outputs.version }}.zip TextureSurprise/
 
       - name: Create Git Tag
         run: |
