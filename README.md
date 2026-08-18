@@ -78,4 +78,3 @@ TextureSurprise uses several third-party libraries. For complete information abo
 
 - Thanks to the WoW addon development community
 - Thanks to the Ace3 team for their addon framework
-- Thanks to the Plumber team for their icon assets and asset system used in Edit Mode integration

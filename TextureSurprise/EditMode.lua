@@ -13,13 +13,6 @@ EditModeTS = {}
 
 -- Constants
 local SYSTEM_ID_TEXTURESURPRISE = 37001 -- Unique system ID for Edit Mode
-local ASSET_PATH = "Interface\\AddOns\\TextureSurprise\\assets\\"
-
--- Utility Functions
-local function DisableSharpening(texture)
-    texture:SetTexelSnappingBias(0)
-    texture:SetSnapToPixelGrid(false)
-end
 
 -- Edit Mode Mixins and Methods
 --- Base EditModeMixin - Provides core edit mode functionality (highlighting, selection, basic behavior)
@@ -29,20 +22,13 @@ EditModeTS.EditModeMixin = {}
 --- @param state: Boolean - true to show highlight, false to hide
 --- @return: None
 function EditModeTS.EditModeMixin:SetHighlighted(state)
-    if not self.EditModeHighlightParts then return end
-    
+    if not self.Selection then return end
+
     if state then
-        -- Set texture and show all border parts
-        for _, part in pairs(self.EditModeHighlightParts) do
-            part:SetTexture(ASSET_PATH .. "PlumberEditMode")
-            part:Show()
-        end
+        self.Selection:ShowHighlighted()
         self.isSelected = false
     else
-        -- Hide all border parts
-        for _, part in pairs(self.EditModeHighlightParts) do
-            part:Hide()
-        end
+        self.Selection:Hide()
     end
 end
 
@@ -50,20 +36,13 @@ end
 --- @param state: Boolean - true to show selection, false to hide
 --- @return: None
 function EditModeTS.EditModeMixin:SetSelected(state)
-    if not self.EditModeHighlightParts then return end
-    
+    if not self.Selection then return end
+
     if state then
-        -- Set texture and show all border parts
-        for _, part in pairs(self.EditModeHighlightParts) do
-            part:SetTexture(ASSET_PATH .. "PlumberEditModeSelect")
-            part:Show()
-        end
+        self.Selection:ShowSelected()
         self.isSelected = true
     else
-        -- Hide all border parts
-        for _, part in pairs(self.EditModeHighlightParts) do
-            part:Hide()
-        end
+        self.Selection:Hide()
         self.isSelected = false
     end
 end
@@ -87,102 +66,21 @@ function EditModeTS.EditModeMixin:OnEditModeExit()
     self:SetSelected(false)
 end
 
---- Description: Initializes the edit mode overlay for the frame using 9-slice border technique
+--- Description: Initializes the edit mode overlay for the frame, reusing Blizzard's native Edit Mode selection widget
 --- @param None
 --- @return: None
 function EditModeTS.EditModeMixin:InitializeEditMode()
-    -- Create 9-slice border system instead of single stretched texture
-    self.EditModeHighlightParts = {}
-    
-    -- Create border pieces: corners, edges, and center
-    local borderParts = {
-        "TopLeft", "Top", "TopRight",
-        "Left", "Center", "Right", 
-        "BottomLeft", "Bottom", "BottomRight"
-    }
-    
-    for _, part in ipairs(borderParts) do
-        local texture = self:CreateTexture(nil, "OVERLAY")
-        DisableSharpening(texture)
-        self.EditModeHighlightParts[part] = texture
-        texture:Hide()
-    end
-    
-    -- Start with initial positioning
-    self:UpdateHighlightPosition()
-    
+    -- Same selection border template Blizzard's own Edit Mode systems (action bars, minimap, etc.) use
+    local selection = CreateFrame("Frame", nil, self, "EditModeSystemSelectionTemplate")
+    selection:SetAllPoints(self)
+    selection:EnableMouse(false) -- interaction stays owned by this frame, not Blizzard's Edit Mode manager
+    selection:SetSystem({ GetSystemName = function() return self.textureName end })
+    selection:Hide()
+    self.Selection = selection
+
     -- Initialize edit mode state
     self.isSelected = false
     self.editModeActive = false
-end
-
---- Description: Updates the highlight overlay positions
---- @param None
---- @return: None
-function EditModeTS.EditModeMixin:UpdateHighlightPosition()
-    if not self.EditModeHighlightParts then return end
-    
-    -- Get current frame dimensions
-    local frameWidth = self:GetWidth()
-    local frameHeight = self:GetHeight()
-    
-    -- Border size (assuming the texture has 8-pixel borders)
-    local borderSize = 8
-    local totalWidth = frameWidth + borderSize 
-    local totalHeight = frameHeight + borderSize
-    
-    -- Calculate edge dimensions (center sections that can stretch)
-    local centerWidth = math.max(1, frameWidth)
-    local centerHeight = math.max(1, frameHeight)
-    
-    local parts = self.EditModeHighlightParts
-    
-    -- Position corners (fixed size, no stretching)
-    -- Top-left corner
-    parts.TopLeft:SetSize(borderSize, borderSize)
-    parts.TopLeft:SetPoint("TOPLEFT", self, "TOPLEFT", -borderSize, borderSize)
-    parts.TopLeft:SetTexCoord(0, 0.25, 0, 0.25) -- Top-left quarter
-    
-    -- Top-right corner  
-    parts.TopRight:SetSize(borderSize, borderSize)
-    parts.TopRight:SetPoint("TOPRIGHT", self, "TOPRIGHT", borderSize, borderSize)
-    parts.TopRight:SetTexCoord(0.75, 1, 0, 0.25) -- Top-right quarter
-    
-    -- Bottom-left corner
-    parts.BottomLeft:SetSize(borderSize, borderSize)
-    parts.BottomLeft:SetPoint("BOTTOMLEFT", self, "BOTTOMLEFT", -borderSize, -borderSize)
-    parts.BottomLeft:SetTexCoord(0, 0.25, 0.75, 1) -- Bottom-left quarter
-    
-    -- Bottom-right corner
-    parts.BottomRight:SetSize(borderSize, borderSize)
-    parts.BottomRight:SetPoint("BOTTOMRIGHT", self, "BOTTOMRIGHT", borderSize, -borderSize)
-    parts.BottomRight:SetTexCoord(0.75, 1, 0.75, 1) -- Bottom-right quarter
-    
-    -- Position edges (stretch in one direction)
-    -- Top edge
-    parts.Top:SetSize(centerWidth, borderSize)
-    parts.Top:SetPoint("TOP", self, "TOP", 0, borderSize)
-    parts.Top:SetTexCoord(0.25, 0.75, 0, 0.25) -- Top edge, horizontally tileable
-    
-    -- Bottom edge
-    parts.Bottom:SetSize(centerWidth, borderSize)
-    parts.Bottom:SetPoint("BOTTOM", self, "BOTTOM", 0, -borderSize)
-    parts.Bottom:SetTexCoord(0.25, 0.75, 0.75, 1) -- Bottom edge, horizontally tileable
-    
-    -- Left edge
-    parts.Left:SetSize(borderSize, centerHeight)
-    parts.Left:SetPoint("LEFT", self, "LEFT", -borderSize, 0)
-    parts.Left:SetTexCoord(0, 0.25, 0.25, 0.75) -- Left edge, vertically tileable
-    
-    -- Right edge
-    parts.Right:SetSize(borderSize, centerHeight)
-    parts.Right:SetPoint("RIGHT", self, "RIGHT", borderSize, 0)
-    parts.Right:SetTexCoord(0.75, 1, 0.25, 0.75) -- Right edge, vertically tileable
-    
-    -- Center (can stretch in both directions)
-    parts.Center:SetSize(centerWidth, centerHeight)
-    parts.Center:SetPoint("CENTER", self, "CENTER", 0, 0)
-    parts.Center:SetTexCoord(0.25, 0.75, 0.25, 0.75) -- Center, tileable in both directions
 end
 
 --- Description: Creates an edit menu for the frame
@@ -666,7 +564,7 @@ function EditModeTS.EditModeTextureMixin:UpdatePosition()
     end
 end
 
---- Description: Updates the frame size and refreshes highlight overlay
+--- Description: Updates the frame size (the selection overlay follows automatically via SetAllPoints)
 --- @param width: New width value
 --- @param height: New height value (optional)
 --- @return: None
@@ -677,9 +575,6 @@ function EditModeTS.EditModeTextureMixin:UpdateSize(width, height)
     if height then
         self:SetHeight(height)
     end
-    
-    -- Update the highlight overlay to maintain 20 pixel margin
-    self:UpdateHighlightPosition()
 end
 
 --- Description: Updates the texture rotation
